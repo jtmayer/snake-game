@@ -1,14 +1,21 @@
-var drawSnake = function (snakeList, canvas)
+var canvas = document.getElementById("a");
+
+var drawSnakes = function (snakeList, canvas)
 {
-    for each (snake in snakeList)
+    for each (var snake in snakeList)
     {
-	drawPixel(snake.oldTail, canvas, 0xFF);
+	drawPixel(snake.oldTail, canvas, "0xFF");
     }
 
-    for each (snake in snakeList)
+    for each (var snake in snakeList)
     {
-	drawPixel(snake.tail.val, canvas, 0x00);
+	drawPixel(snake.head.val, canvas, "0x00");
     }
 }
 
-var drawPixel
+var drawPixel = function (coordinates, canvas, color)
+{
+    var context = canvas.getContext("2d");
+    context.fillStyle = color;
+    context.fillRect(coordinates.x, coordinates.y, 1, 1);
+}
