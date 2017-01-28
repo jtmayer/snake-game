@@ -22,7 +22,30 @@ var makePairType = function(firstElementName, secondElementName)
     };
 }
 
+// delay and force were originally authored by user kana at https://gist.github.com/kana/5344530
+// Modifications were made to delay such that expressionAsFunction is only evaluated once, as pointed out by user
+// gavin-romig-koch
+var delay = function(expressionAsFunction)
+{
+    var result;
+    var isEvaluated = false;
+    
+    return function ()
+    {
+	if (!isEvaluated)
+	{
+	    isEvaluated = true;
+	    result = expressionAsFunction();
+	}
+	
+	return result;
+    };
+}
 
+var force = function(promise)
+{
+    return promise();
+}
 // -==========================================
 
 var drawPixel = function (cords, canvas, color)
