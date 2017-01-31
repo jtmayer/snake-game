@@ -52,19 +52,22 @@ var drawPixel = function (cords, canvas, color)
 {
     var context = canvas.getContext("2d");
     context.fillStyle = color;
-    context.fillRect(cords.x, cords.y, 20, 20);
+    context.fillRect(cords.x, cords.y, 1, 1);
 }
 
 var drawSnake = function (snakeList, canvas)
 {
-    for (var i = snakeList.length()-1; i >= 0; ++i)
+    for (var i in snakeList)
     {
-	drawPixel(snakeList[i].oldTail, canvas, "0xFF");
+	if (snakeList[i].oldTail != null) {
+	    drawPixel(snakeList[i].oldTail, canvas, "#FFFFFF");
+	    console.log("HI");
+	}
     }
 
-    for (var i = snakeList.length()-1; i >= 0; ++i)
+    for (var i in snakeList)
     {
-	drawPixel(snakeList[i].tail.val, canvas, "0x00");
+	drawPixel(snakeList[i].head.val, canvas, "#000000");
     }
 }
 
@@ -77,25 +80,37 @@ var makeNode = makePairType("val", "next");
 // Todo: Replace next of tail with a delayed expression.
 var makeSnake = function (cords)
 {
-    return {"oldTail" : null,
-	    "tail" : makeNode(cords, null),
-	    "head" : tail};
+    var node = makeNode(cords, null);
+    var snake = {"oldTail" : null,
+		 "tail" : node,
+		 "head" : node,
+		 "direction" : makeCords(1,0)
+		}
+    
+    return snake;
 }
 
 var updateSnake = function(snake)
 {
-    var nextHead = snake.head.next;
     
-    if(!isFood(nextHead.val))
-    {
+    snake.head.next = makeNode(makeCords(snake.head.val.x + snake.direction.x, snake.head.val.y + snake.direction.y), null);
+    snake.head = snake.head.next;
+    
+    //if(!isFood(snake.head))
+    //{
 	snake.oldTail = snake.tail.val;
 	snake.tail = snake.tail.next;
-    }
-
-    snake.head = nextHead;
+    //}
+    
     return snake;
 }
 
 var canvas = document.getElementById("a");
 var cords = makeCords(5, 5);
-drawPixel(cords, canvas, "0x00");
+drawPixel(cords, canvas, "#000000");
+
+var snake = makeSnake(makeCords(10, 50));
+snake = updateSnake(snake);
+drawSnake([snake], canvas);
+
+// Write main loop
