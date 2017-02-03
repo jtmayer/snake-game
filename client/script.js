@@ -97,7 +97,11 @@ var updateSnakes = function(snakeList, board)
 	snakeList[i].head.next = makeNode(makeCords(snakeList[i].head.val.x + snakeList[i].direction.x, snakeList[i].head.val.y + snakeList[i].direction.y), null);
 	snakeList[i].head = snakeList[i].head.next;
 	
-	if(!isFood(board, snakeList[i].head.val))
+	if(isFood(board, snakeList[i].head.val)) {
+	    board[snakeList[i].head.val.x][snakeList[i].head.val.y] = null;
+	    board = addFoodtoBoard(board, makeCords(Math.floor(Math.random() * canvas.width), Math.floor(Math.random() * canvas.height)));
+	}
+        else
 	{
 	    snakeList[i].oldTail = snakeList[i].tail.val;
 	    snakeList[i].tail = snakeList[i].tail.next;
@@ -108,8 +112,16 @@ var updateSnakes = function(snakeList, board)
 }
 
 var isFood = function(board, cord) {
-    return board[cord.x][cord.y] == "food";
+    try
+    {
+        return board[cord.x][cord.y] == "food";
+    }
+    catch(err)
+    {
+	return false;
+    }
 }
+
 var makeBoard = function(canvas)
 {
     var board = new Array(canvas.width);
@@ -121,8 +133,24 @@ var makeBoard = function(canvas)
 	    board[i][j] = null;
 	}
     }
-
+    board = addFoodtoBoard(board, makeCords(Math.floor(Math.random() * canvas.width), Math.floor(Math.random() * canvas.height)));
     // board[20][50] = "food";
+    return board;
+}
+
+var drawFood = function(board, canvas)
+{
+    for (var x in board) {
+	for (var y in board[x]) {
+            if (board[x][y] == "food")
+	    	drawPixel(makeCords(x, y), canvas, "#FF0000");
+	}
+    }
+}
+
+var addFoodtoBoard = function(board, cord)
+{
+    board[cord.x][cord.y] = "food";
     return board;
 }
 
@@ -136,17 +164,72 @@ var removeFoodFromBoard = function(board, snakeList)
     return board;
 }
 
-var snakeList = [makeSnake(makeCords(10,50))];
+var getWinner = function(snakeList, canvas) {
+    for (i in snakeList) {
+	if (snakeList[i].head.val.x >= canvas.width || snakeList[i].head.val.y >= canvas.height || snakeList[i].head.val.x < 0 || snakeList[i].head.val.y < 0)
+	    return 1 - i;
+
+	for (j in snakeList)
+	{
+		for (var snakeNode = snakeList[j].tail; snakeNode != null; snakeNode = snakeNode.next)
+		{
+			if (snakeList[i].head.val.x == snakeNode.val.x && snakeList[i].head.val.y == snakeNode.val.y && !(i == j && snakeNode.val.x == snakeList[j].head.val.x && snakeNode.val.y == snakeList[j].head.val.y))
+			{
+				return 1 - i;
+			}	
+		}
+	}
+    }
+}
+
+var snakeList = [makeSnake(makeCords(10,10)), makeSnake(makeCords(4,10))];
 var canvas = document.getElementById("a");
 var board = makeBoard(canvas);
+
+document.addEventListener("keydown", function(event) {
+    switch (event.keyCode) {
+	case 38: //up
+	    snakeList[0].direction = makeCords(0,-1);
+	    break;
+	case 40: //down
+	    snakeList[0].direction = makeCords(0,1);
+	    break;
+	case 37:  //left
+	    snakeList[0].direction = makeCords(-1,0);
+	    break;
+	case 39: //right
+	    snakeList[0].direction = makeCords(1,0);
+	    break;
+	case 87: //up2
+	    snakeList[1].direction = makeCords(0,-1);
+	    break;
+	case 83: //down2
+	    snakeList[1].direction = makeCords(0,1);
+	    break;
+	case 65:  //left2
+	    snakeList[1].direction = makeCords(-1,0);
+	    break;
+	case 68: //right2
+	    snakeList[1].direction = makeCords(1,0);
+	    break;
+	default:
+    }
+})
 
 var mainLoop = function()
 {
     // getInput();
     // updateGame();
     snakeList = updateSnakes(snakeList, board);
-    drawSnakes(snakeList, canvas);
-    setTimeout(mainLoop, 100);
+    var score = getWinner(snakeList, canvas);
+    if (score == null) {
+        drawSnakes(snakeList, canvas);
+        drawFood(board, canvas);
+    	setTimeout(mainLoop, 100);
+    } 
+    else {
+	console.log(score);
+    }
 }
 
 mainLoop();
