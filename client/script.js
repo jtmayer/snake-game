@@ -5,21 +5,56 @@
 var makePairType = function(firstElementName, secondElementName)
 {
     return function (a, b) {
-	var o = {};
+	var pair = {};
 	
-	Object.defineProperty(o, firstElementName, {
+	Object.defineProperty(pair, firstElementName, {
 	    value: a,
 	    writable: true,
-	    configurable: true
+	    configurable: true,
+	    enumerable: true
 	});
 	
-	Object.defineProperty(o, secondElementName, {
+	Object.defineProperty(pair, secondElementName, {
 	    value: b,
 	    writable: true,
-	    configurable: true
+	    configurable: true,
+	    enumerable: true
 	});
-	return o;
+	return pair;
     };
+}
+
+var isPair = function(x)
+{
+    var propCount = 0;
+    
+    for (var prop in x)
+    {
+	++propCount;
+    }
+
+    return propCount == 2;
+}
+
+var pairEquality = function(pair1, pair2)
+{
+    var elem1, elem2;
+    
+    for (var prop in pair1)
+    {
+	elem1 = pair1[prop];
+	elem2 = pair2[prop];
+	
+	if (isPair(elem1) && isPair(elem2) && !pairEquality(elem1, elem2) ||
+	    isPair(elem1) && !isPair(elem2) ||
+	    isPair(elem2) && !isPair(elem1) ||
+	    !isPair(elem1) && !isPair(elem2) && elem1 != elem2)
+	{
+	    return false;
+	}
+    }
+
+    return isPair(pair1) && isPair(pair2);
 }
 
 // delay and force were originally authored by user kana at https://gist.github.com/kana/5344530
@@ -173,16 +208,22 @@ var getWinner = function(snakeList, canvas) {
 	{
 		for (var snakeNode = snakeList[j].tail; snakeNode != null; snakeNode = snakeNode.next)
 		{
-			if (snakeList[i].head.val.x == snakeNode.val.x && snakeList[i].head.val.y == snakeNode.val.y && !(i == j && snakeNode.val.x == snakeList[j].head.val.x && snakeNode.val.y == snakeList[j].head.val.y))
+		    if (pairEquality(snakeList[i].head.val, snakeNode.val) &&
+			!(i == j && pairEquality(snakeNode, snakeList[j].head)))
 			{
 				return 1 - i;
 			}	
 		}
+
+	    if (pairEquality(snakeList[i].head.val, snakeList[j].oldTail))
+	    {
+		return 1 - i;
+	    }
 	}
     }
 }
 
-var snakeList = [makeSnake(makeCords(10,10)), makeSnake(makeCords(4,10))];
+var snakeList = [makeSnake(makeCords(10,10)), makeSnake(makeCords(7,10))];
 var canvas = document.getElementById("a");
 var board = makeBoard(canvas);
 
@@ -216,8 +257,14 @@ document.addEventListener("keydown", function(event) {
     }
 })
 
-var mainLoop = function()
+var mainLoop = function(// snakeList, canvas, board
+		       )
 {
+    // if (board == null)
+    // {
+    // 	board = makeBoard(canvas);
+    // }
+    
     // getInput();
     // updateGame();
     snakeList = updateSnakes(snakeList, board);
@@ -225,14 +272,18 @@ var mainLoop = function()
     if (score == null) {
         drawSnakes(snakeList, canvas);
         drawFood(board, canvas);
-    	setTimeout(mainLoop, 100);
+    	setTimeout(mainLoop, 100// , snakeList, canvas, board
+		  );
     } 
     else {
 	console.log(score);
     }
 }
 
-mainLoop();
+mainLoop(// [makeSnake(makeCords(10,10)), makeSnake(makeCords(7,10))],
+	 // document.getElementById("a"),
+	 // null
+	);
 
 // var cords = makeCords(5, 5);
 // drawPixel(cords, canvas, "#000000");
