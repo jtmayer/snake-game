@@ -87,7 +87,7 @@ var drawPixel = function (cords, canvas, color)
 {
     var context = canvas.getContext("2d");
     context.fillStyle = color;
-    context.fillRect(cords.x, cords.y, 1, 1);
+    context.fillRect(cords.x*10, cords.y*10, 10, 10);
 }
 
 var drawSnakes = function (snakeList, canvas)
@@ -134,7 +134,7 @@ var updateSnakes = function(snakeList, board)
 	
 	if(isFood(board, snakeList[i].head.val)) {
 	    board[snakeList[i].head.val.x][snakeList[i].head.val.y] = null;
-	    board = addFoodtoBoard(board, makeCords(Math.floor(Math.random() * canvas.width), Math.floor(Math.random() * canvas.height)));
+	    board = addFoodtoBoard(board, makeCords(Math.floor(Math.random() * canvas.width/10), Math.floor(Math.random() * canvas.height/10)));
 	}
         else
 	{
@@ -159,16 +159,16 @@ var isFood = function(board, cord) {
 
 var makeBoard = function(canvas)
 {
-    var board = new Array(canvas.width);
-    for (var i = 0; i < canvas.width; ++i) {
-	board[i] = new Array(canvas.height);
+    var board = new Array(canvas.width/10);
+    for (var i = 0; i < canvas.width/10; ++i) {
+	board[i] = new Array(canvas.height/10);
 
-	for (var j = 0; j < canvas.height; ++j)
+	for (var j = 0; j < canvas.height/10; ++j)
 	{
 	    board[i][j] = null;
 	}
     }
-    board = addFoodtoBoard(board, makeCords(Math.floor(Math.random() * canvas.width), Math.floor(Math.random() * canvas.height)));
+    board = addFoodtoBoard(board, makeCords(Math.floor(Math.random() * canvas.width/10), Math.floor(Math.random() * canvas.height/10)));
     // board[20][50] = "food";
     return board;
 }
@@ -200,8 +200,10 @@ var removeFoodFromBoard = function(board, snakeList)
 }
 
 var getWinner = function(snakeList, canvas) {
+    var headOnCollision = 0;
+
     for (i in snakeList) {
-	if (snakeList[i].head.val.x >= canvas.width || snakeList[i].head.val.y >= canvas.height || snakeList[i].head.val.x < 0 || snakeList[i].head.val.y < 0)
+	if (snakeList[i].head.val.x >= canvas.width/10 || snakeList[i].head.val.y >= canvas.height/10 || snakeList[i].head.val.x < 0 || snakeList[i].head.val.y < 0)
 	    return 1 - i;
 
 	for (j in snakeList)
@@ -217,45 +219,52 @@ var getWinner = function(snakeList, canvas) {
 
 	    if (pairEquality(snakeList[i].head.val, snakeList[j].oldTail))
 	    {
-		return 1 - i;
+		
+		return 1 - i;		
 	    }
 	}
     }
 }
 
-var snakeList = [makeSnake(makeCords(10,10)), makeSnake(makeCords(7,10))];
+var snakeList = [makeSnake(makeCords(9,10)), makeSnake(makeCords(7,10))];
 var canvas = document.getElementById("a");
 var board = makeBoard(canvas);
 
 document.addEventListener("keydown", function(event) {
     switch (event.keyCode) {
 	case 38: //up
-	    snakeList[0].direction = makeCords(0,-1);
+	    snakeList[0].direction = changeDirection(snakeList[0].direction, makeCords(0,-1));
 	    break;
 	case 40: //down
-	    snakeList[0].direction = makeCords(0,1);
+	    snakeList[0].direction = changeDirection(snakeList[0].direction, makeCords(0,1));
 	    break;
 	case 37:  //left
-	    snakeList[0].direction = makeCords(-1,0);
+	    snakeList[0].direction = changeDirection(snakeList[0].direction, makeCords(-1,0));
 	    break;
 	case 39: //right
-	    snakeList[0].direction = makeCords(1,0);
+	    snakeList[0].direction = changeDirection(snakeList[0].direction, makeCords(1,0));
 	    break;
 	case 87: //up2
-	    snakeList[1].direction = makeCords(0,-1);
+	    snakeList[1].direction = changeDirection(snakeList[0].direction, makeCords(0,-1));
 	    break;
 	case 83: //down2
-	    snakeList[1].direction = makeCords(0,1);
+	    snakeList[1].direction = changeDirection(snakeList[0].direction, makeCords(0,1));
 	    break;
 	case 65:  //left2
-	    snakeList[1].direction = makeCords(-1,0);
+	    snakeList[1].direction = changeDirection(snakeList[0].direction, makeCords(-1,0));
 	    break;
 	case 68: //right2
-	    snakeList[1].direction = makeCords(1,0);
+	    snakeList[1].direction = changeDirection(snakeList[0].direction, makeCords(1,0));
 	    break;
 	default:
     }
 })
+
+var changeDirection = function(snakeDirection, direction) {
+	if (!pairEquality(snakeDirection, makeCords(-direction.x, -direction.y)))
+	    return direction;
+	return snakeDirection;
+}
 
 var mainLoop = function(// snakeList, canvas, board
 		       )
@@ -272,7 +281,7 @@ var mainLoop = function(// snakeList, canvas, board
     if (score == null) {
         drawSnakes(snakeList, canvas);
         drawFood(board, canvas);
-    	setTimeout(mainLoop, 100// , snakeList, canvas, board
+    	setTimeout(mainLoop, 50// , snakeList, canvas, board
 		  );
     } 
     else {
