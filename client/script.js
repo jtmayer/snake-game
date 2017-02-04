@@ -12,7 +12,8 @@
 
 var Server;
 
-function log( text ) {
+function log( text )
+{
     $log = $('#log');
     //Add text to log
     $log.append(($log.val()?"\n":'')+text);
@@ -20,7 +21,8 @@ function log( text ) {
     $log[0].scrollTop = $log[0].scrollHeight - $log[0].clientHeight;
 }
 
-function connect(){
+function connect()
+{
     log('Connecting...');
     Server = new FancyWebSocket('ws://' + document.getElementById('ip').value + ':' + document.getElementById('port').value);
 
@@ -48,7 +50,7 @@ function connect(){
 }
 
 // Todo: Togglable lazy evaluation functionality.
-var makePairType = function(firstElementName, secondElementName)
+function makePairType(firstElementName, secondElementName)
 {
     return function (a, b) {
 	var pair = {};
@@ -70,7 +72,7 @@ var makePairType = function(firstElementName, secondElementName)
     };
 }
 
-var isPair = function(x)
+function isPair(x)
 {
     var propCount = 0;
     
@@ -82,14 +84,22 @@ var isPair = function(x)
     return propCount == 2;
 }
 
-var pairEquality = function(pair1, pair2)
+function pairEquality(pair1, pair2)
 {
     var elem1, elem2;
     
     for (var prop in pair1)
     {
 	elem1 = pair1[prop];
-	elem2 = pair2[prop];
+	try
+	{
+	    elem2 = pair2[prop];
+	}
+
+	catch(err)
+	{
+	    return false;
+	}
 	
 	if (isPair(elem1) && isPair(elem2) && !pairEquality(elem1, elem2) ||
 	    isPair(elem1) && !isPair(elem2) ||
@@ -103,10 +113,23 @@ var pairEquality = function(pair1, pair2)
     return isPair(pair1) && isPair(pair2);
 }
 
+function pairToArray(pair)
+{
+    var resultantArray = new Array(2);
+    var currentIndex = 0;
+    for (var prop in pair)
+    {
+	resultantArray[currentIndex] = pair[prop];
+	++currentIndex;
+    }
+
+    return resultantArray;
+}
+
 // delay and force were originally authored by user kana at https://gist.github.com/kana/5344530
 // Modifications were made to delay such that expressionAsFunction is only evaluated once, as pointed out by user
 // gavin-romig-koch
-var delay = function(expressionAsFunction)
+function delay(expressionAsFunction)
 {
     var result;
     var isEvaluated = false;
@@ -123,11 +146,10 @@ var delay = function(expressionAsFunction)
     };
 }
 
-var force = function(promise)
+function force(promise)
 {
     return promise();
 }
-// -==========================================
 
 // Returns a function that is the result of composing of the argument functions.
 // Ex. compose(f,g)(argument) -> f(g(argument))
@@ -137,9 +159,12 @@ function compose()
     // Copies arguments from the invisible "arguments" variable.
     var fns = Array.prototype.slice.call(arguments, 0);
 
-    return function (result)
+    return function ()
     {
-	for (var i = fns.length - 1; i > -1; i--)
+	var args = Array.prototype.slice.call(arguments, 0);
+	var firstFunctionIndex = fns.length - 1;
+	var result = fns[firstFunctionIndex].apply(this, args);
+	for (var i = firstFunctionIndex - 1; i >= 0; --i)
 	{
 	    result = fns[i].call(this, result);
 	}
@@ -148,64 +173,131 @@ function compose()
     };
 }
 
+function makeExtremaGenerator(comparisonOperator)
+{
+    return function()
+    {
+	var args = Array.prototype.slice.call(arguments, 0);
+
+	for (var i in args)
+	{
+	    if (comparisonOperator(args[i], args[0]))
+	    {
+		args[0] = args[i];
+	    }
+	}
+
+	return args[0];
+    }
+}
+
+function lt(x, y)
+{
+    return x < y;
+}
+
+function gt(x, y)
+{
+    return x > y;
+}
+
+var min = makeExtremaGenerator(lt);
+var max = makeExtremaGenerator(gt);
+
 function map()
 {
     var args = Array.prototype.slice.call(arguments, 0);
-    var arrayProperties = new Array(arrays.length-1);
-    var resultantArray;
+    var arrayProperties = new Array(args.length-1);
     
     for (var i = 0; i < arrayProperties.length; ++i)
     {
-	arrayProperties[i] = arrays[i+1].length;
+	arrayProperties[i] = args[i+1].length;
     }
 
     var resultantArray = new Array(min.apply(this, arrayProperties));
     for (var i = 0; i < resultantArray.length; ++i)
     {
-	for (var j in arrays)
+	for (var j = 0; j < arrayProperties.length; ++j)
 	{
-	    arrayProperties[j] = arrays[j+1][i];
+	    arrayProperties[j] = args[j+1][i];
 	}
-	
+
 	resultantArray[i] = args[0].apply(this, arrayProperties);
     }
 
     return resultantArray;
 }
 
-// function reduce()
-// {
-//     var args = Array.prototype.slice.call(arguments, 0);
-//     var collection = args[1];
+function reduce()
+{
+    var args = Array.prototype.slice.call(arguments, 0);
+    var collection = args[1];
 
-//     for (var i = 2; i < args.length; ++i)
-//     {
+    for (var i = 2; i < args.length; ++i)
+    {
+	collection = args[0](args[i], collection);
+    }
 
-//     }
+    return collection;
+}
 
-//     return collection;
-// }
+function makeBooleanReducer(booleanOperator, defaultBooleanValue)
+{
+    return function()
+    {
+	var mappedArgs = map.apply(this, Array.prototype.slice.call(arguments, 0));
+	var newArgs = new Array(mappedArgs.length+2);
 
-// function makeBooleanReducer(booleanOperator, defaultBooleanValue)
-// {
-//     return function()
-//     {
-// 	var args = Array.prototype.slice.call(arguments, 0);
-// 	var newArgs = new Array(args.length+2);
+	for (var i in mappedArgs)
+	{
+	    newArgs[i+2] = mappedArgs[i];
+	}
 
-// 	for (var i in args)
-// 	{
-// 	    newArgs[i+2] = args[i];
-// 	}
+	newArgs[0] = booleanOperator;
+	newArgs[1] = defaultBooleanValue;
+	return reduce.apply(this, newArgs); 
+    }
+}
 
-// 	newArgs[0] = booleanOperator;
-// 	newArgs[1] = defaultBooleanValue;
-// 	return reduce.apply(this, newArgs); 
-//     }
-// }
+function and()
+{
+    var args = Array.prototype.slice.call(arguments, 0);
+    for (var i in args)
+    {
+	args[0] = args[0] && args[i];
+    }
 
-// var every = makeBooleanReducer(and, true);
-// var any = makeBooleanReducer(or, false);
+    return args[0];
+}
+
+function or()
+{
+    var args = Array.prototype.slice.call(arguments, 0);
+    for (var i in args)
+    {
+	args[0] = args[0] || args[i];
+    }
+
+    return args[0]
+}
+
+var every = makeBooleanReducer(and, true);
+var any = makeBooleanReducer(or, false);
+
+function isInBounds(val, min, max)
+{
+    return val >= min && val <= max;
+}
+
+function inc(val)
+{
+    return ++val;
+}
+
+function dec(val)
+{
+    return --val;
+}
 
 function generateCanvasDependencies(canvas, scaling)
 {
@@ -243,7 +335,11 @@ function generateCanvasDependencies(canvas, scaling)
 	    // isCordsOnBoard
 	    function(cords)
 	    {
-		return cords.x >= 0 && cords.y >= 0 && cords.x < boardWidth && cords.y < boardHeight; 
+		// return cords.x >= 0 && cords.y >= 0 && cords.x < boardWidth && cords.y < boardHeight;
+		return every(isInBounds,
+			     pairToArray(cords),
+			     [0, 0],
+			     map(dec, [boardWidth, boardHeight]));
 	    },
 
 	    // generateCordsOnBoard
@@ -262,7 +358,6 @@ function generateCanvasDependencies(canvas, scaling)
 }
 
 var canvasDependencies = generateCanvasDependencies(document.getElementById("a"), 10);
-
 var drawPixel = canvasDependencies[0];
 
 // var drawPixel = function (cords, canvas, color)
@@ -271,6 +366,10 @@ var drawPixel = canvasDependencies[0];
 //     context.fillStyle = color;
 //     context.fillRect(cords.x*10, cords.y*10, 10, 10);
 // }
+
+var isCordsOnBoard = canvasDependencies[2];
+var makeEmptyBoard = canvasDependencies[1];
+var generateCordsOnBoard = canvasDependencies[3];
 
 function drawSnakes(snakeList)
 {
@@ -301,24 +400,29 @@ function makeSnake(cords)
 		 "tail" : node,
 		 "head" : node,
 		 "direction" : makeCords(1,0),
-		 "length" : 1
-		}
+		 "length" : 1}
     
     return snake;
 }
 
-function updateSnakes(snakeList, board)
+function updateState(state)
 {
+    var snakeList= state.snakeList;
+    var board = state.board;
     for (var i in snakeList)
     {
-	snakeList[i].head.next = makeNode(makeCords(snakeList[i].head.val.x + snakeList[i].direction.x, snakeList[i].head.val.y + snakeList[i].direction.y), null);
+	snakeList[i].head.next = makeNode(makeCords(snakeList[i].head.val.x + snakeList[i].direction.x,
+						    snakeList[i].head.val.y + snakeList[i].direction.y),
+					  null);
 	snakeList[i].head = snakeList[i].head.next;
 	
-	if(isFood(board, snakeList[i].head.val)) {
+	if(isFood(board, snakeList[i].head.val))
+	{
 	    board[snakeList[i].head.val.x][snakeList[i].head.val.y] = null;
 	    board = addFoodtoBoard(board, generateCordsOnBoard());
 	    snakeList[i].length++;
 	}
+	
         else
 	{
 	    snakeList[i].oldTail = snakeList[i].tail.val;
@@ -326,7 +430,10 @@ function updateSnakes(snakeList, board)
 	}
     }
 
-    return snakeList;
+    state.snakeList = snakeList;
+    state.board = board;
+
+    return state;
 }
 
 function isFood(board, cord) {
@@ -340,16 +447,12 @@ function isFood(board, cord) {
     }
 }
 
-var makeEmptyBoard = canvasDependencies[1];
-
-var generateCordsOnBoard = canvasDependencies[3];
-
 function makeBoard()
 {
     var board = makeEmptyBoard();
     board = addFoodtoBoard(board, generateCordsOnBoard());
-// board[20][50] = "food";
-return board;
+    // board[20][50] = "food";
+    return board;
 }
 
 function drawFood(board)
@@ -381,8 +484,6 @@ function removeFoodFromBoard(board, snakeList)
     
     return board;
 }
-
-var isCordsOnBoard = canvasDependencies[2];
 
 function getWinner(snakeList) {
     var headOnCollision = 0;
@@ -429,7 +530,8 @@ function reset()
 
     // board = makeBoard(canvas);
 
-    main([makeSnake(makeCords(9, 10)), makeSnake(makeCords(7, 10))], null);
+    mainLoop({"snakeList" : map(compose(makeSnake, makeCords), [9, 7], [10, 10]),
+	      "board" : null});
 }
 
 document.addEventListener("keydown", function(event) {
@@ -481,29 +583,32 @@ function start()
     reset();
 }
 
-function mainLoop(snakeList, board)
+function mainLoop(state)
 {
-    if (board == null)
+    if (state.board == null)
     {
-    	board = makeBoard();
+	console.log(1);
+    	state.board = makeBoard();
 	clearCanvas();
     }
     
-    snakeList = updateSnakes(snakeList, board);
-    var score = getWinner(snakeList);
-    if (score == null)
+    state = updateState(state);
+    var winner = getWinner(state.snakeList);
+    if (winner == null)
     {
-     	drawSnakes(snakeList);
-        drawFood(board);
-        Server.send('score', "/score-" + document.getElementById("user1").value + "-" + snakeList[0].length);
-        Server.send('score', "/score-" + document.getElementById("user2").value + "-" + snakeList[1].length);
-    	setTimeout(mainLoop, 100, snakeList, board);
+	console.log(2);
+     	drawSnakes(state.snakeList);
+        drawFood(state.board);
+        Server.send('score', "/score-" + document.getElementById("user1").value + "-" + state.snakeList[0].length);
+        Server.send('score', "/score-" + document.getElementById("user2").value + "-" + state.snakeList[1].length);
+    	setTimeout(mainLoop, 100, state);
     }
 
     else
     {
-        Server.send('score', "/score-" + document.getElementById("user1").value + "-" +snakeList[0].length);
-        Server.send('score', "/score-" + document.getElementById("user2").value + "-" +snakeList[1].length);
+	console.log(3);
+        Server.send('score', "/score-" + document.getElementById("user1").value + "-" + state.snakeList[0].length);
+        Server.send('score', "/score-" + document.getElementById("user2").value + "-" + state.snakeList[1].length);
 
 	document.getElementById("userSendButton").disabled = false;
     }
@@ -514,48 +619,3 @@ function setUsernames()
     document.getElementById("userSendButton").disabled = true;
     document.getElementById("startgame").disabled = false;
 }
-
-// mainLoop([makeSnake(makeCords(9, 10)), makeSnake(makeCords(7, 10))], null);
-
-/*
-  var mainLoop = function()
-  {
-  // if (board == null)
-  // {
-  // 	board = makeBoard(canvas);
-  // }
-  
-  // getInput();
-  // updateGame();
-  snakeList = updateSnakes(snakeList, board);
-  var score = getWinner(snakeList, canvas);
-  if (score == null) {
-  drawSnakes(snakeList, canvas);
-  drawFood(board, canvas);
-  setTimeout(mainLoop, 50// , snakeList, canvas, board
-  );
-  } 
-  else {
-  console.log(score);
-  }
-
-  }
-
-
-  // var cords = makeCords(5, 5);
-  // drawPixel(cords, canvas, "#000000");
-
-  // var snake = makeSnake(makeCords(10, 50));
-  // snake = updateSnake(snake);
-  // drawSnake([snake], canvas);
-
-  // Write main loop
-  // var notQuit = true;
-  // var snakes ;
-  // while (notQuit)
-  // {
-  //     updateGame();
-  //     drawGame();
-  //     setTimeOut(function(){});
-  // }
-  */
