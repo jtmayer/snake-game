@@ -1,0 +1,19 @@
+Group 12
+
+Jonathan Mayer 66268081
+Brian Lam 62101239
+Yu Koizumi 
+Tommy Wong 71659011
+
+Works on Linux:
+	Using the terminal go the directory and compile using the make command.
+	Run server with ./snake_server command.
+
+Untested for Windows:
+
+
+Currently cannot run on Mac:
+
+
+The server should generate a highscores.txt file with all the highscores
+of the users.
