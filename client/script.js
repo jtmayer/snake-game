@@ -1,13 +1,51 @@
 /*
-Snake Game script
+  Snake Game script
 
-Group 12
+  Group 12
 
-Jonathan Mayer 66268081
-Brian Lam 62101239
-Yu Koizumi 
-Tommy Wong 71659011
+  Jonathan Mayer 66268081
+  Brian Lam 62101239
+  Yu Koizumi 
+  Tommy Wong 71659011
 */
+
+
+var Server;
+
+function log( text ) {
+    $log = $('#log');
+    //Add text to log
+    $log.append(($log.val()?"\n":'')+text);
+    //Autoscroll
+    $log[0].scrollTop = $log[0].scrollHeight - $log[0].clientHeight;
+}
+
+function connect(){
+    log('Connecting...');
+    Server = new FancyWebSocket('ws://' + document.getElementById('ip').value + ':' + document.getElementById('port').value);
+
+    //Let the user know we're connected
+    Server.bind('open', function() {
+        document.getElementById("cntBtn").disabled = true;
+	log("Connected.");
+	document.getElementById("userSendButton").disabled = false;
+    });
+
+    //OH NOES! Disconnection occurred.
+    Server.bind('close', function( data ) {
+        document.getElementById("cntBtn").disabled = false;
+	log("Disconnected.");
+	document.getElementById("userSendButton").disabled = true;
+	document.getElementById("startgame").disabled = true;
+    });
+
+    //Log any messages sent from server
+    Server.bind('message', function( payload ) {
+	log(payload);
+    });
+
+    Server.connect();
+}
 
 // Todo: Togglable lazy evaluation functionality.
 var makePairType = function(firstElementName, secondElementName)
@@ -91,26 +129,161 @@ var force = function(promise)
 }
 // -==========================================
 
-var drawPixel = function (cords, canvas, color)
+// Returns a function that is the result of composing of the argument functions.
+// Ex. compose(f,g)(argument) -> f(g(argument))
+// Originally authored at: http://blakeembrey.com/articles/2014/01/compose-functions-javascript/
+function compose()
 {
-    var context = canvas.getContext("2d");
-    context.fillStyle = color;
-    context.fillRect(cords.x*10, cords.y*10, 10, 10);
+    // Copies arguments from the invisible "arguments" variable.
+    var fns = Array.prototype.slice.call(arguments, 0);
+
+    return function (result)
+    {
+	for (var i = fns.length - 1; i > -1; i--)
+	{
+	    result = fns[i].call(this, result);
+	}
+	
+	return result;
+    };
 }
 
-var drawSnakes = function (snakeList, canvas)
+function map()
+{
+    var args = Array.prototype.slice.call(arguments, 0);
+    var arrayProperties = new Array(arrays.length-1);
+    var resultantArray;
+    
+    for (var i = 0; i < arrayProperties.length; ++i)
+    {
+	arrayProperties[i] = arrays[i+1].length;
+    }
+
+    var resultantArray = new Array(min.apply(this, arrayProperties));
+    for (var i = 0; i < resultantArray.length; ++i)
+    {
+	for (var j in arrays)
+	{
+	    arrayProperties[j] = arrays[j+1][i];
+	}
+	
+	resultantArray[i] = args[0].apply(this, arrayProperties);
+    }
+
+    return resultantArray;
+}
+
+// function reduce()
+// {
+//     var args = Array.prototype.slice.call(arguments, 0);
+//     var collection = args[1];
+
+//     for (var i = 2; i < args.length; ++i)
+//     {
+
+//     }
+
+//     return collection;
+// }
+
+// function makeBooleanReducer(booleanOperator, defaultBooleanValue)
+// {
+//     return function()
+//     {
+// 	var args = Array.prototype.slice.call(arguments, 0);
+// 	var newArgs = new Array(args.length+2);
+
+// 	for (var i in args)
+// 	{
+// 	    newArgs[i+2] = args[i];
+// 	}
+
+// 	newArgs[0] = booleanOperator;
+// 	newArgs[1] = defaultBooleanValue;
+// 	return reduce.apply(this, newArgs); 
+//     }
+// }
+
+// var every = makeBooleanReducer(and, true);
+// var any = makeBooleanReducer(or, false);
+
+function generateCanvasDependencies(canvas, scaling)
+{
+    var context =canvas.getContext("2d");
+    var boardWidth = canvas.width / scaling;
+    var boardHeight = canvas.height / scaling;
+    
+    return [
+	// drawPixel
+	function(cords, color)
+	{
+	    context.fillStyle = color;
+	    context.fillRect(cords.x * scaling,
+			     cords.y * scaling,
+			     scaling,
+			     scaling);
+	},
+
+	// makeEmptyBoard
+	function()
+	{
+	    var board = new Array(boardWidth);
+	    for (var i = 0; i < boardWidth; ++i) {
+		board[i] = new Array(boardHeight);
+		
+		for (var j = 0; j < boardHeight; ++j)
+		{
+		    board[i][j] = null;
+		}
+	    }
+	    
+	    return board;
+	},
+
+	    // isCordsOnBoard
+	    function(cords)
+	    {
+		return cords.x >= 0 && cords.y >= 0 && cords.x < boardWidth && cords.y < boardHeight; 
+	    },
+
+	    // generateCordsOnBoard
+	    function()
+	    {
+		return makeCords(Math.floor(Math.random() * boardWidth),
+				 Math.floor(Math.random() * boardHeight));
+	    },
+
+	    // clearCanvas
+	    function()
+	    {
+		context.fillStyle = "#FFFFFF";
+		context.fillRect(0, 0, canvas.width, canvas.height);
+	    }];
+}
+
+var canvasDependencies = generateCanvasDependencies(document.getElementById("a"), 10);
+
+var drawPixel = canvasDependencies[0];
+
+// var drawPixel = function (cords, canvas, color)
+// {
+//     var context = canvas.getContext("2d");
+//     context.fillStyle = color;
+//     context.fillRect(cords.x*10, cords.y*10, 10, 10);
+// }
+
+function drawSnakes(snakeList)
 {
     for (var i in snakeList)
     {
 	if (snakeList[i].oldTail != null) {
-	    drawPixel(snakeList[i].oldTail, canvas, "#FFFFFF");
-	    // console.log("HI");
+	    drawPixel(snakeList[i].oldTail, "#FFFFFF");
 	}
     }
 
     for (var i in snakeList)
     {
-	drawPixel(snakeList[i].head.val, canvas, "#000000");
+	drawPixel(snakeList[i].head.val, "#000000");
     }
 }
 
@@ -121,7 +294,7 @@ var makeCords = makePairType("x", "y");
 var makeNode = makePairType("val", "next");
 
 // Todo: Replace next of tail with a delayed expression.
-var makeSnake = function (cords)
+function makeSnake(cords)
 {
     var node = makeNode(cords, null);
     var snake = {"oldTail" : null,
@@ -134,7 +307,7 @@ var makeSnake = function (cords)
     return snake;
 }
 
-var updateSnakes = function(snakeList, board)
+function updateSnakes(snakeList, board)
 {
     for (var i in snakeList)
     {
@@ -143,7 +316,7 @@ var updateSnakes = function(snakeList, board)
 	
 	if(isFood(board, snakeList[i].head.val)) {
 	    board[snakeList[i].head.val.x][snakeList[i].head.val.y] = null;
-	    board = addFoodtoBoard(board, makeCords(Math.floor(Math.random() * canvas.width/10), Math.floor(Math.random() * canvas.height/10)));
+	    board = addFoodtoBoard(board, generateCordsOnBoard());
 	    snakeList[i].length++;
 	}
         else
@@ -156,7 +329,7 @@ var updateSnakes = function(snakeList, board)
     return snakeList;
 }
 
-var isFood = function(board, cord) {
+function isFood(board, cord) {
     try
     {
         return board[cord.x][cord.y] == "food";
@@ -167,39 +340,39 @@ var isFood = function(board, cord) {
     }
 }
 
-var makeBoard = function(canvas)
-{
-    var board = new Array(canvas.width/10);
-    for (var i = 0; i < canvas.width/10; ++i) {
-	board[i] = new Array(canvas.height/10);
+var makeEmptyBoard = canvasDependencies[1];
 
-	for (var j = 0; j < canvas.height/10; ++j)
+var generateCordsOnBoard = canvasDependencies[3];
+
+function makeBoard()
+{
+    var board = makeEmptyBoard();
+    board = addFoodtoBoard(board, generateCordsOnBoard());
+// board[20][50] = "food";
+return board;
+}
+
+function drawFood(board)
+{
+    for (var x in board)
+    {
+	for (var y in board[x])
 	{
-	    board[i][j] = null;
-	}
-    }
-    board = addFoodtoBoard(board, makeCords(Math.floor(Math.random() * canvas.width/10), Math.floor(Math.random() * canvas.height/10)));
-    // board[20][50] = "food";
-    return board;
-}
-
-var drawFood = function(board, canvas)
-{
-    for (var x in board) {
-	for (var y in board[x]) {
             if (board[x][y] == "food")
-	    	drawPixel(makeCords(x, y), canvas, "#FF0000");
+	    {
+	    	drawPixel(makeCords(x, y), "#FF0000");
+	    }
 	}
     }
 }
 
-var addFoodtoBoard = function(board, cord)
+function addFoodtoBoard(board, cord)
 {
     board[cord.x][cord.y] = "food";
     return board;
 }
 
-var removeFoodFromBoard = function(board, snakeList)
+function removeFoodFromBoard(board, snakeList)
 {
     for(var i in snakeList)
     {
@@ -209,23 +382,25 @@ var removeFoodFromBoard = function(board, snakeList)
     return board;
 }
 
-var getWinner = function(snakeList, canvas) {
+var isCordsOnBoard = canvasDependencies[2];
+
+function getWinner(snakeList) {
     var headOnCollision = 0;
 
     for (i in snakeList) {
-	if (snakeList[i].head.val.x >= canvas.width/10 || snakeList[i].head.val.y >= canvas.height/10 || snakeList[i].head.val.x < 0 || snakeList[i].head.val.y < 0)
+	if (!isCordsOnBoard(snakeList[i].head.val))
 	    return 1 - i;
 
 	for (j in snakeList)
 	{
-		for (var snakeNode = snakeList[j].tail; snakeNode != null; snakeNode = snakeNode.next)
+	    for (var snakeNode = snakeList[j].tail; snakeNode != null; snakeNode = snakeNode.next)
+	    {
+		if (pairEquality(snakeList[i].head.val, snakeNode.val) &&
+		    !(i == j && pairEquality(snakeNode, snakeList[j].head)))
 		{
-		    if (pairEquality(snakeList[i].head.val, snakeNode.val) &&
-			!(i == j && pairEquality(snakeNode, snakeList[j].head)))
-			{
-				return 1 - i;
-			}	
-		}
+		    return 1 - i;
+		}	
+	    }
 
 	    if (pairEquality(snakeList[i].head.val, snakeList[j].oldTail))
 	    {
@@ -236,95 +411,151 @@ var getWinner = function(snakeList, canvas) {
     }
 }
 
-var snakeList = [makeSnake(makeCords(9,10)), makeSnake(makeCords(7,10))];
-var canvas = document.getElementById("a");
-var board = makeBoard(canvas);
+// var snakeList = [makeSnake(makeCords(9,10)), makeSnake(makeCords(7,10))];
+// var canvas = document.getElementById("a");
+// var board = makeBoard(canvas);
 
-var reset = function()
+var clearCanvas = canvasDependencies[4];
+
+function reset()
 {
-	snakeList = [makeSnake(makeCords(9,10)), makeSnake(makeCords(7,10))];
-	canvas = document.getElementById("a");
-	var context = canvas.getContext("2d");
-    context.fillStyle = "#FFFFFF";
-    context.fillRect(0, 0, canvas.width, canvas.height);
+    // snakeList = [makeSnake(makeCords(9,10)), makeSnake(makeCords(7,10))];
+    // canvas = document.getElementById("a");
+    // var context = canvas.getContext("2d");
+    // context.fillStyle = "#FFFFFF";
+    // context.fillRect(0, 0, canvas.width, canvas.height);
 
-	board = makeBoard(canvas);
+    // clearCanvas();
+
+    // board = makeBoard(canvas);
+
+    main([makeSnake(makeCords(9, 10)), makeSnake(makeCords(7, 10))], null);
 }
 
 document.addEventListener("keydown", function(event) {
     switch (event.keyCode) {
-	case 38: //up
-	    snakeList[0].direction = changeDirection(snakeList[0].direction, makeCords(0,-1));
-	    break;
-	case 40: //down
-	    snakeList[0].direction = changeDirection(snakeList[0].direction, makeCords(0,1));
-	    break;
-	case 37:  //left
-	    snakeList[0].direction = changeDirection(snakeList[0].direction, makeCords(-1,0));
-	    break;
-	case 39: //right
-	    snakeList[0].direction = changeDirection(snakeList[0].direction, makeCords(1,0));
-	    break;
-	case 87: //up2
-	    snakeList[1].direction = changeDirection(snakeList[1].direction, makeCords(0,-1));
-	    break;
-	case 83: //down2
-	    snakeList[1].direction = changeDirection(snakeList[1].direction, makeCords(0,1));
-	    break;
-	case 65:  //left2
-	    snakeList[1].direction = changeDirection(snakeList[1].direction, makeCords(-1,0));
-	    break;
-	case 68: //right2
-	    snakeList[1].direction = changeDirection(snakeList[1].direction, makeCords(1,0));
-	    break;
-	default:
+    case 38: //up
+	snakeList[0].direction = changeDirection(snakeList[0].direction, makeCords(0,-1));
+	break;
+    case 40: //down
+	snakeList[0].direction = changeDirection(snakeList[0].direction, makeCords(0,1));
+	break;
+    case 37:  //left
+	snakeList[0].direction = changeDirection(snakeList[0].direction, makeCords(-1,0));
+	break;
+    case 39: //right
+	snakeList[0].direction = changeDirection(snakeList[0].direction, makeCords(1,0));
+	break;
+    case 87: //up2
+	snakeList[1].direction = changeDirection(snakeList[1].direction, makeCords(0,-1));
+	break;
+    case 83: //down2
+	snakeList[1].direction = changeDirection(snakeList[1].direction, makeCords(0,1));
+	break;
+    case 65:  //left2
+	snakeList[1].direction = changeDirection(snakeList[1].direction, makeCords(-1,0));
+	break;
+    case 68: //right2
+	snakeList[1].direction = changeDirection(snakeList[1].direction, makeCords(1,0));
+	break;
+    default:
     }
 })
 
-var changeDirection = function(snakeDirection, direction) {
-	if (!pairEquality(snakeDirection, makeCords(-direction.x, -direction.y)))
-	    return direction;
-	return snakeDirection;
-}
-/*
-var mainLoop = function()
-{
-    // if (board == null)
-    // {
-    // 	board = makeBoard(canvas);
-    // }
+function changeDirection(snake, direction) {
+    if (!pairEquality(snake.direction, makeCords(-direction.x, -direction.y)) ||
+	snake.length == 1)
+    {
+	return direction;
+    }
     
-    // getInput();
-    // updateGame();
+    return snake.direction;
+}
+
+function start()
+{
+    document.getElementById("startgame").disabled = true;
+    // clearCanvas();
+    Server.send('start_game', "/start_game-" + "??");
+    // mainLoop([makeSnake(makeCords(9, 10)), makeSnake(makeCords(7, 10))], null);
+    reset();
+}
+
+function mainLoop(snakeList, board)
+{
+    if (board == null)
+    {
+    	board = makeBoard();
+	clearCanvas();
+    }
+    
     snakeList = updateSnakes(snakeList, board);
-    var score = getWinner(snakeList, canvas);
-    if (score == null) {
-        drawSnakes(snakeList, canvas);
-        drawFood(board, canvas);
-    	setTimeout(mainLoop, 50// , snakeList, canvas, board
-		  );
-    } 
-    else {
-	console.log(score);
+    var score = getWinner(snakeList);
+    if (score == null)
+    {
+     	drawSnakes(snakeList);
+        drawFood(board);
+        Server.send('score', "/score-" + document.getElementById("user1").value + "-" + snakeList[0].length);
+        Server.send('score', "/score-" + document.getElementById("user2").value + "-" + snakeList[1].length);
+    	setTimeout(mainLoop, 100, snakeList, board);
     }
 
+    else
+    {
+        Server.send('score', "/score-" + document.getElementById("user1").value + "-" +snakeList[0].length);
+        Server.send('score', "/score-" + document.getElementById("user2").value + "-" +snakeList[1].length);
+
+	document.getElementById("userSendButton").disabled = false;
+    }
 }
 
+function setUsernames()
+{
+    document.getElementById("userSendButton").disabled = true;
+    document.getElementById("startgame").disabled = false;
+}
 
-// var cords = makeCords(5, 5);
-// drawPixel(cords, canvas, "#000000");
+// mainLoop([makeSnake(makeCords(9, 10)), makeSnake(makeCords(7, 10))], null);
 
-// var snake = makeSnake(makeCords(10, 50));
-// snake = updateSnake(snake);
-// drawSnake([snake], canvas);
+/*
+  var mainLoop = function()
+  {
+  // if (board == null)
+  // {
+  // 	board = makeBoard(canvas);
+  // }
+  
+  // getInput();
+  // updateGame();
+  snakeList = updateSnakes(snakeList, board);
+  var score = getWinner(snakeList, canvas);
+  if (score == null) {
+  drawSnakes(snakeList, canvas);
+  drawFood(board, canvas);
+  setTimeout(mainLoop, 50// , snakeList, canvas, board
+  );
+  } 
+  else {
+  console.log(score);
+  }
 
-// Write main loop
-// var notQuit = true;
-// var snakes ;
-// while (notQuit)
-// {
-//     updateGame();
-//     drawGame();
-//     setTimeOut(function(){});
-// }
-*/
+  }
+
+
+  // var cords = makeCords(5, 5);
+  // drawPixel(cords, canvas, "#000000");
+
+  // var snake = makeSnake(makeCords(10, 50));
+  // snake = updateSnake(snake);
+  // drawSnake([snake], canvas);
+
+  // Write main loop
+  // var notQuit = true;
+  // var snakes ;
+  // while (notQuit)
+  // {
+  //     updateGame();
+  //     drawGame();
+  //     setTimeOut(function(){});
+  // }
+  */

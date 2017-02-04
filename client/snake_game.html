@@ -23,82 +23,86 @@ Tommy Wong 71659011
         #user2 {line-height:20px}
 	</style>
 	<link rel='stylesheet' type='text/css' href='stylesheet.css'/>
-	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
-	<script src="fancywebsocket.js"></script>
-	<script>
-		var Server;
+	<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+	<script type="text/javascript" src="fancywebsocket.js"></script>
+	<!-- <script type="text/javascript"> -->
+	  <!-- var Server; -->
 
-		function log( text ) {
-			$log = $('#log');
-			//Add text to log
-			$log.append(($log.val()?"\n":'')+text);
-			//Autoscroll
-			$log[0].scrollTop = $log[0].scrollHeight - $log[0].clientHeight;
-		}
+	  <!-- function log( text ) { -->
+	  <!-- $log = $('#log'); -->
+	  <!-- //Add text to log -->
+	  <!-- $log.append(($log.val()?"\n":'')+text); -->
+	  <!-- //Autoscroll -->
+	  <!-- $log[0].scrollTop = $log[0].scrollHeight - $log[0].clientHeight; -->
+	  <!-- } -->
 
-        function connect(){
-            log('Connecting...');
-			Server = new FancyWebSocket('ws://' + document.getElementById('ip').value + ':' + document.getElementById('port').value);
+	  <!-- function connect(){ -->
+	  <!-- log('Connecting...'); -->
+	  <!-- Server = new FancyWebSocket('ws://' + document.getElementById('ip').value + ':' + document.getElementById('port').value); -->
 
-			//Let the user know we're connected
-			Server.bind('open', function() {
-                document.getElementById("cntBtn").disabled = true;
-				log( "Connected." );
-				document.getElementById("userSendButton").disabled = false;
-			});
+	  <!-- //Let the user know we're connected -->
+	  <!-- Server.bind('open', function() { -->
+          <!-- document.getElementById("cntBtn").disabled = true; -->
+	  <!-- log("Connected."); -->
+	  <!-- document.getElementById("userSendButton").disabled = false; -->
+	  <!-- }); -->
 
-			//OH NOES! Disconnection occurred.
-			Server.bind('close', function( data ) {
-                document.getElementById("cntBtn").disabled = false;
-				log( "Disconnected." );
-				document.getElementById("userSendButton").disabled = true;
-				document.getElementById("startgame").disabled = true;
-			});
+	  <!-- //OH NOES! Disconnection occurred. -->
+	  <!-- Server.bind('close', function( data ) { -->
+          <!-- document.getElementById("cntBtn").disabled = false; -->
+	  <!-- log("Disconnected."); -->
+	  <!-- document.getElementById("userSendButton").disabled = true; -->
+	  <!-- document.getElementById("startgame").disabled = true; -->
+	  <!-- }); -->
 
-			//Log any messages sent from server
-			Server.bind('message', function( payload ) {
-				log( payload );
-			});
+	  <!-- //Log any messages sent from server -->
+	  <!-- Server.bind('message', function( payload ) { -->
+	  <!-- log(payload); -->
+	  <!-- }); -->
 
-			Server.connect();
-        }
-
-	</script>
+	  <!-- Server.connect(); -->
+	  <!-- } -->
+	<!-- </script> -->
         <canvas id="a" width="500" height="500">
             This text is displayed if your browser does not support HTML5 Canvas.
         </canvas>
 	<script type='text/javascript' src='script.js'></script>
-	<script>
-		function start()
-		{
-			document.getElementById("startgame").disabled = true;
-			reset();
-			Server.send('start_game', "/start_game-" + "??");
-			mainLoop();
-		}
-		function mainLoop()
-		{
-			snakeList = updateSnakes(snakeList, board);
-    		var score = getWinner(snakeList, canvas);
-    		if (score == null) {
-     		    drawSnakes(snakeList, canvas);
-        		drawFood(board, canvas);
-        		Server.send('score', "/score-" + document.getElementById("user1").value + "-" + snakeList[0].length);
-        		Server.send('score', "/score-" + document.getElementById("user2").value + "-" + snakeList[1].length);
-    			setTimeout(mainLoop, 50);// , snakeList, canvas, board
-		  	} else {
-        		Server.send('score', "/score-" + document.getElementById("user1").value + "-" +snakeList[0].length);
-        		Server.send('score', "/score-" + document.getElementById("user2").value + "-" +snakeList[1].length);
+	<!-- <script> -->
+	<!-- 	function start() -->
+	<!-- 	{ -->
+	<!-- 		document.getElementById("startgame").disabled = true; -->
+	<!-- 		reset(); -->
+	<!-- 		Server.send('start_game', "/start_game-" + "??"); -->
+	<!-- 		mainLoop([makeSnake(makeCords(9, 10)), makeSnake(makeCords(7, 10))], null); -->
+	<!-- 	} -->
+	<!-- 	function mainLoop(snakeList, board) -->
+	<!-- 	{ -->
+	<!-- 	if (board == null) -->
+	<!-- 	{ -->
+     	<!-- 	    board = makeBoard(); -->
+	<!-- 	} -->
+		
+	<!-- 	snakeList = updateSnakes(snakeList, board); -->
+    	<!-- 	var score = getWinner(snakeList); -->
+    	<!-- 	if (score == null) { -->
+     	<!-- 	    drawSnakes(snakeList); -->
+        <!-- 		drawFood(board); -->
+        <!-- 		Server.send('score', "/score-" + document.getElementById("user1").value + "-" + snakeList[0].length); -->
+        <!-- 		Server.send('score', "/score-" + document.getElementById("user2").value + "-" + snakeList[1].length); -->
+    	<!-- 		setTimeout(mainLoop, 100, snakeList, board); -->
+	<!-- 	  	} else { -->
+        <!-- 		Server.send('score', "/score-" + document.getElementById("user1").value + "-" +snakeList[0].length); -->
+        <!-- 		Server.send('score', "/score-" + document.getElementById("user2").value + "-" +snakeList[1].length); -->
 
-				document.getElementById("userSendButton").disabled=false;
-		  	}
-		}
-		function setUsernames()
-		{
-			document.getElementById("userSendButton").disabled=true;
-			document.getElementById("startgame").disabled = false;
-		}
-	</script>
+	<!-- 			document.getElementById("userSendButton").disabled=false; -->
+	<!-- 	  	} -->
+	<!-- 	} -->
+	<!-- 	function setUsernames() -->
+	<!-- 	{ -->
+	<!-- 		document.getElementById("userSendButton").disabled=true; -->
+	<!-- 		document.getElementById("startgame").disabled = false; -->
+	<!-- 	} -->
+	<!-- </script> -->
 
 </head>
 
