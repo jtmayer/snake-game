@@ -246,9 +246,9 @@ function makeBooleanReducer(booleanOperator, defaultBooleanValue)
     return function()
     {
 	var mappedArgs = map.apply(this, Array.prototype.slice.call(arguments, 0));
-	var newArgs = new Array(mappedArgs.length+2);
+	var newArgs = new Array(mappedArgs.length + 2);
 
-	for (var i in mappedArgs)
+	for (var i = 0; i < mappedArgs.length; ++i)
 	{
 	    newArgs[i+2] = mappedArgs[i];
 	}
@@ -370,6 +370,7 @@ var drawPixel = canvasDependencies[0];
 var isCordsOnBoard = canvasDependencies[2];
 var makeEmptyBoard = canvasDependencies[1];
 var generateCordsOnBoard = canvasDependencies[3];
+var clearCanvas = canvasDependencies[4];
 
 function drawSnakes(snakeList)
 {
@@ -490,7 +491,9 @@ function getWinner(snakeList) {
 
     for (i in snakeList) {
 	if (!isCordsOnBoard(snakeList[i].head.val))
+	{
 	    return 1 - i;
+	}
 
 	for (j in snakeList)
 	{
@@ -505,18 +508,17 @@ function getWinner(snakeList) {
 
 	    if (pairEquality(snakeList[i].head.val, snakeList[j].oldTail))
 	    {
-		
 		return 1 - i;		
 	    }
 	}
     }
+
+    return null;
 }
 
 // var snakeList = [makeSnake(makeCords(9,10)), makeSnake(makeCords(7,10))];
 // var canvas = document.getElementById("a");
 // var board = makeBoard(canvas);
-
-var clearCanvas = canvasDependencies[4];
 
 function reset()
 {
@@ -534,36 +536,6 @@ function reset()
 	      "board" : null});
 }
 
-document.addEventListener("keydown", function(event) {
-    switch (event.keyCode) {
-    case 38: //up
-	snakeList[0].direction = changeDirection(snakeList[0].direction, makeCords(0,-1));
-	break;
-    case 40: //down
-	snakeList[0].direction = changeDirection(snakeList[0].direction, makeCords(0,1));
-	break;
-    case 37:  //left
-	snakeList[0].direction = changeDirection(snakeList[0].direction, makeCords(-1,0));
-	break;
-    case 39: //right
-	snakeList[0].direction = changeDirection(snakeList[0].direction, makeCords(1,0));
-	break;
-    case 87: //up2
-	snakeList[1].direction = changeDirection(snakeList[1].direction, makeCords(0,-1));
-	break;
-    case 83: //down2
-	snakeList[1].direction = changeDirection(snakeList[1].direction, makeCords(0,1));
-	break;
-    case 65:  //left2
-	snakeList[1].direction = changeDirection(snakeList[1].direction, makeCords(-1,0));
-	break;
-    case 68: //right2
-	snakeList[1].direction = changeDirection(snakeList[1].direction, makeCords(1,0));
-	break;
-    default:
-    }
-})
-
 function changeDirection(snake, direction) {
     if (!pairEquality(snake.direction, makeCords(-direction.x, -direction.y)) ||
 	snake.length == 1)
@@ -573,6 +545,10 @@ function changeDirection(snake, direction) {
     
     return snake.direction;
 }
+// function handleEvents(eventQueue, state)
+// {
+//     for (event 
+// }
 
 function start()
 {
@@ -583,20 +559,69 @@ function start()
     reset();
 }
 
+var up = makeCords(0, -1);
+var down = makeCords(0, 1);
+var left = makeCords(-1, 0);
+var right = makeCords(1, 0);
+
 function mainLoop(state)
 {
+    function eventHandler(event)
+    {
+	var direciton;
+	
+	switch (event.keyCode) {
+	case 38: //up
+	    direction = up;
+	    break;
+	case 40: //down
+	    direction = down;
+	    break;
+	case 37:  //left
+	    direction = left;
+	    break;
+	case 39: //right
+	    direction = right;
+	    break;
+	case 87: //up2
+	    direction = up;
+	    break;
+	case 83: //down2
+	    direction = down;
+	    break;
+	case 65:  //left2
+	    direction = left;
+	    break;
+	case 68: //right2
+	    direction = right;
+	    break;
+	default:
+	}
+
+	if (event.keyCode <= 40)
+	{
+	    state.snakeList[0] = changeDirection(state.snakeList[0], direction);
+	}
+
+	else
+	{
+	    state.snakeList[1] = changeDirection(state.snakeList[1], direction);
+	}
+    }
+    
+    document.addEventListener("keydown", eventHandler)
+    
     if (state.board == null)
     {
-	console.log(1);
     	state.board = makeBoard();
 	clearCanvas();
     }
-    
+
+    // state = updateState(handleEvents(eventQueue, state));
     state = updateState(state);
     var winner = getWinner(state.snakeList);
     if (winner == null)
     {
-	console.log(2);
      	drawSnakes(state.snakeList);
         drawFood(state.board);
         Server.send('score', "/score-" + document.getElementById("user1").value + "-" + state.snakeList[0].length);
@@ -606,7 +631,6 @@ function mainLoop(state)
 
     else
     {
-	console.log(3);
         Server.send('score', "/score-" + document.getElementById("user1").value + "-" + state.snakeList[0].length);
         Server.send('score', "/score-" + document.getElementById("user2").value + "-" + state.snakeList[1].length);
 
