@@ -390,6 +390,11 @@ function drawSnakes(snakeList)
 // Creates a cords object.
 var makeCords = makePairType("x", "y");
 
+var up = makeCords(0, -1);
+var down = makeCords(0, 1);
+var left = makeCords(-1, 0);
+var right = makeCords(1, 0);
+
 // Creates a node object.
 var makeNode = makePairType("val", "next");
 
@@ -533,17 +538,18 @@ function reset()
     // board = makeBoard(canvas);
 
     mainLoop({"snakeList" : map(compose(makeSnake, makeCords), [9, 7], [10, 10]),
-	      "board" : null});
+	      "board" : null},
+	     75);
 }
 
 function changeDirection(snake, direction) {
     if (!pairEquality(snake.direction, makeCords(-direction.x, -direction.y)) ||
 	snake.length == 1)
     {
-	return direction;
+	snake.direction = direction;
     }
     
-    return snake.direction;
+    return snake;
 }
 // function handleEvents(eventQueue, state)
 // {
@@ -559,13 +565,11 @@ function start()
     reset();
 }
 
-var up = makeCords(0, -1);
-var down = makeCords(0, 1);
-var left = makeCords(-1, 0);
-var right = makeCords(1, 0);
-
-function mainLoop(state)
+function mainLoop(state, frameTime)
 {
+    var d = new Date();
+    var initTime = d.getTime();
+    
     function eventHandler(event)
     {
 	var direciton;
@@ -609,10 +613,9 @@ function mainLoop(state)
 	}
     }
     
-    document.addEventListener("keydown", eventHandler)
-    
     if (state.board == null)
     {
+	document.addEventListener("keydown", eventHandler);
     	state.board = makeBoard();
 	clearCanvas();
     }
@@ -626,7 +629,7 @@ function mainLoop(state)
         drawFood(state.board);
         Server.send('score', "/score-" + document.getElementById("user1").value + "-" + state.snakeList[0].length);
         Server.send('score', "/score-" + document.getElementById("user2").value + "-" + state.snakeList[1].length);
-    	setTimeout(mainLoop, 100, state);
+    	setTimeout(mainLoop, frameTime + initTime - d.getTime(), state, frameTime);
     }
 
     else
