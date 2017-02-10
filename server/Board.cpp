@@ -1,35 +1,30 @@
 #include <random>
+#include "Board.hpp"
 
-std::vector<std::vector<int>> *board;
-
-void addItem(std::vector<std::vector<int>> &board, int item)
+Board::Board(int length, int width)
 {
-
+  board = std::vector<std::vector<int>>(length);
+  for(int i = 0; i < length; it++)
+    {
+      board[i] = std::vector<int>(width, 0);
+    }
+  this.length = length;
+  this.width = width;
 }
 
-class Board
+void Board::addItem(int item)
 {
-public:
-	Board(int length, int width)
-	{
-		board = std::vector<std::vector<int>>(length);
-		for(int i = 0; i < length; it++)
-		{
-			board[i] = std::vector<int>(width, 0);
-		}
-		this.length = length;
-		this.width = width;
-	}
+  int x = rand() * length;
+  int y = rand() * width;
+  board[x][y] = item;
+}
 
-	void addItem(int item)
-	{
-		int x = rand() * length;
-		int y = rand() * width;
-		board[x][y] = item;
-	}
+void Board::setItem(int x, int y, int item)
+{
+  board[x][y] = item;
+}
 
-private:
-	std::vector<std::vector<int>> board;
-	int legnth;
-	int width;
-};
+int Board::getItem(int x, int y)
+{
+  return board[x][y];
+}
