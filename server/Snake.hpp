@@ -17,7 +17,13 @@ struct Coord
 
   Coord operator+=(Coord coord2);
 
+  Coord operator==(Coord coord2);
+
+  Coord operator!=(Coord coord2);
+
   Coord operator-();
+
+  std::string str();
   
   int x;
   int y;
@@ -27,6 +33,7 @@ const Coord UP{0, -1};
 const Coord DOWN{0, 1};
 const Coord LEFT{-1, 0};
 const Coord RIGHT{1, 0};
+const Coord NONE{0, 0};
 
 class Snake
 {

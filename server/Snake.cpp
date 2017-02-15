@@ -1,6 +1,4 @@
 #include "Snake.hpp"
-#include "Board.hpp"
-
 
 Coord::Coord(int x, int y)
 {
@@ -13,6 +11,16 @@ Coord Coord::operator+(Coord coord2)
 	return Coord(x + coord2.x, y + coord2.y);
 }
 
+bool Coord::operator==(Coord coord2)
+{
+	return this.x == coord2.x && this.y == coord2.y;
+}
+
+bool Coord::operator!=(Coord coord2)
+{
+	return !(this == coord2);
+}
+
 Coord Coord::operator+=(Coord coord2)
 {
 	x += coord2.x;
@@ -23,6 +31,13 @@ Coord Coord::operator+=(Coord coord2)
 Coord Coord::operator-()
 {
 	return Coord{-x, -y};
+}
+
+std::string Coord::str()
+{
+	ostringstream os;
+	os << x << ", " << y;
+	return os.str();
 }
 
 
@@ -56,16 +71,16 @@ void Snake::update()
 
 void Snake::changeDirection(Coord direction)
 {
-	if(direction == -this.direction || length == 1)
+	if(direction != -this.direction || length == 1)
 		this.direction = direction;
 }
 
- Coord getHead()
- {
- 	return head->value;
- }
+Coord Snake::getHead()
+{
+	return head->value;
+}
 
- Coord getOldTail()
- {
- 	return oldTail;
- }
+Coord Snake::getOldTail()
+{
+	return oldTail;
+}

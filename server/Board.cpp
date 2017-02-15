@@ -5,9 +5,9 @@ Board::Board(int length, int width)
 {
   board = std::vector<std::vector<int>>(length);
   for(int i = 0; i < length; it++)
-    {
-      board[i] = std::vector<int>(width, 0);
-    }
+  {
+    board[i] = std::vector<int>(width, 0);
+  }
   this.length = length;
   this.width = width;
 }

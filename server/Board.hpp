@@ -1,7 +1,7 @@
 #ifndef BOARD_HPP
 #define BOARD_HPP
 
-enum Items {empty, food, powerUp};
+enum Item {empty, food, powerUp};
 
 class Board
 {
@@ -16,7 +16,7 @@ public:
 
 private:
   std::vector<std::vector<int>> board;
-  int legnth;
+  int length;
   int width;
 };
 
