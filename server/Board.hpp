@@ -14,6 +14,10 @@ public:
   
   int getItem(int x, int y);
 
+  int getLength();
+
+  int getWidth();
+
 private:
   std::vector<std::vector<int>> board;
   int length;

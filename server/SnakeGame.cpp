@@ -3,17 +3,18 @@
 #include <exception>
 #include "websocket.h"
 #include <sstream>
+#include <algorithm>
 
 Board board;
 std::vector<Snake> snakeList;
 webSocket* server;
-int frame;
+//int frame;
 std::vector<Coord> directions;
 
 void initializeGame(int length, int width, int num_players, webSocket* s)
 {
 	server = s;
-	if(num_players > min(length, width))
+	if(num_players > std::min(length, width))
 	{
 		throw std::range_error::range_error{"Number of players has exceeded board size!"};
 	}
@@ -23,7 +24,7 @@ void initializeGame(int length, int width, int num_players, webSocket* s)
 		snakeList.push_back(Snake{Coord{i, i}, *board}); //Temporary starting positions
 	}
 	directions = std::vector<Coord>(num_players, NULL);
-	frame = 0;
+	//frame = 0;
 }
 
 void gameLoop()
@@ -33,33 +34,53 @@ void gameLoop()
 		for(int i = 0; i < directions.size(); i++)
 			directions[i] = NULL;
 
-		for(int i = 0; i < server.getClientIDs().size(); i++)
+		for(int i = 0; i < server->getClientIDs().size(); i++)
 		{
-			server.wsSend(i, "/input_demand-" + str(frame));
+			server->wsSend(i, "/input_demand-");// + str(frame));
 		}
 
 		// while not all input received
 		while(!inputsReceived())
 		{
-
+			// do nothing
 		}
 
+		for(int i = 0; i < directions.size(); i++)
+		{
+			if(directions[i] != NONE)
+				snakeList[i].changeDirection(directions[i]);
+			directions[i] = NULL;
+		}
 		for(int i = 0; i < snakeList.size(); i++)
 		{
 			snakeList[i].update();
 		}
-		for(int i = 0; i < server.getClientIDs().size(); i++)
+		for(int i = 0; i < server->getClientIDs().size(); i++)
 		{
-			Snake s = snakeList[i];
-			std::ostringstream os;
-			Coord head = s.getHead();
-			Coord oldTail = s.getOldTail();
-			os << "/head-" << head.str();
-			server->wsSend(i, os.str()); // Incomplete
-			os << "/oldTail-" << oldTail.str();
-			server->wsSend(i, os);
+			for(int j = 0; j < server->getClientIDs().size(); j++)
+			{
+				Snake s = snakeList[j];
+				std::ostringstream os;
+				Coord head = s.getHead();
+				Coord oldTail = s.getOldTail();
+				os << "/snake-" << j << "-" << head.str() << "-" << oldTail.str() << "-" << s.getLength();
+				server->wsSend(i, os.str());
+			}
 		}
-		frame++;
+		for(int i = 0; i < board.getLength(); i++)
+		{
+			for(int j = 0; j < board.getWidth(); j++)
+			{
+				if(board.getItem(i, j) == food)
+				{
+					ostringstream os;
+					os << "/food-" << i << "," << j;
+					for(int k = 0; k < server->getClientIDs.size(); k++)
+						server->wsSend(k, os.str());
+				}
+			}
+		}
+		//frame++;
 	}
 }
 
@@ -93,6 +114,13 @@ void gameMessageHandler(int clientID, std::string message)
     	else
     		newDirection = NONE;
     	directions[clientID] = newDirection;
+    }
+    else if(type == "/ready")
+    {
+
+    }
+    else if(type == "/username")
+    {
     	
     }
 }

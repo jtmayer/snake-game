@@ -48,6 +48,8 @@ public:
 
   Coord getOldTail();
 
+  int getLength();
+
 private:
   Node* head;
   Node* tail;

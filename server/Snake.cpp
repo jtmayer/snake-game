@@ -57,12 +57,12 @@ void Snake::update()
 	int x = head->value.x;
 	int y = head->value.y;
 	if(board->getItem(x, y) == food) // Check for food
-	  {
+  	{
 		length++;
 		board->setItem(x, y, empty);
 		board->addItem(food);
 		return;
-	  }
+	}
 	Node* temp = tail;
 	tail = tail->next;
 	oldTail = temp->value;
@@ -83,4 +83,9 @@ Coord Snake::getHead()
 Coord Snake::getOldTail()
 {
 	return oldTail;
+}
+
+int Snae::getLength()
+{
+	return length;
 }

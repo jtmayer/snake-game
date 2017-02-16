@@ -29,17 +29,27 @@ map<string, int> user_scores;
 /* called when a client connects */
 void openHandler(int clientID){
     ostringstream os;
-    if (clientID != 0)
+    if (clientID >= 2)
     {
         server.wsSend(clientID, "The server is full!");
         server.wsClose(clientID);
     }
-    server.wsSend(clientID, "Welcome!");
+    os << "Welcome! You are Player " << clientID;
+    server.wsSend(clientID, os.str());
 }
 
 /* called when a client disconnects */
 void closeHandler(int clientID){
-
+    if(clientID < 2)
+    {
+        for(int i = 0; i < server->getClientIDs().size(); i++)
+        {
+            ostringstream os;
+            os << "Oh no! Player " << clientID << " disconnected! Game over!";
+            if(i != clientID)
+                server->wsSend(i, os.str());
+        }
+    }
 }
 
 /* called when a client sends a message to the server */

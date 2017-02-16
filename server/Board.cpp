@@ -28,3 +28,13 @@ int Board::getItem(int x, int y)
 {
   return board[x][y];
 }
+
+int Board::getLength()
+{
+  return length;
+}
+
+int Board::getWidth()
+{
+  return width;
+}

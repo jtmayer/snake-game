@@ -30,23 +30,46 @@ function connect()
     Server.bind('open', function() {
         document.getElementById("cntBtn").disabled = true;
 	log("Connected.");
-	document.getElementById("userSendButton").disabled = false;
+	document.getElementById("setUsernameButton").disabled = false;
     });
 
     //OH NOES! Disconnection occurred.
     Server.bind('close', function( data ) {
         document.getElementById("cntBtn").disabled = false;
 	log("Disconnected.");
-	document.getElementById("userSendButton").disabled = true;
-	document.getElementById("startgame").disabled = true;
+	document.getElementById("setUsernameButton").disabled = true;
+	document.getElementById("readyButton").disabled = true;
     });
 
     //Log any messages sent from server
     Server.bind('message', function( payload ) {
-	log(payload);
+	//log(payload);
+	var index = payload.indexOf("-");
+	var type = payload.substring(0, index);
+	var message = payload.substring(index+1);
+	if(type == "/input_demand")
+	{
+		Server.send('input_demand', "/direction-" + direction);
+	}
+	else if(type == "/snake")
+	{
+
+	}
+	else if(type == "/food")
+	{
+
+	}
     });
 
     Server.connect();
+}
+
+
+function setUsername()
+{
+    document.getElementById("setUsernameButton").disabled = true;
+    Server.send('username', "/username-" + document.getElementById("username".value));
+    document.getElementById("readyButton").disabled = false;
 }
 
 // Todo: Togglable lazy evaluation functionality.
@@ -521,9 +544,9 @@ function getWinner(snakeList) {
     return null;
 }
 
-// var snakeList = [makeSnake(makeCords(9,10)), makeSnake(makeCords(7,10))];
-// var canvas = document.getElementById("a");
-// var board = makeBoard(canvas);
+var snakeList = [makeSnake(makeCords(9,10)), makeSnake(makeCords(7,10))];
+var canvas = document.getElementById("a");
+var board = makeBoard(canvas);
 
 function reset()
 {
@@ -556,11 +579,11 @@ function changeDirection(snake, direction) {
 //     for (event 
 // }
 
-function start()
+function ready()
 {
-    document.getElementById("startgame").disabled = true;
+    document.getElementById("ready").disabled = true;
     // clearCanvas();
-    Server.send('start_game', "/start_game-" + "??");
+    Server.send('ready', "/ready-");
     // mainLoop([makeSnake(makeCords(9, 10)), makeSnake(makeCords(7, 10))], null);
     reset();
 }
@@ -627,8 +650,7 @@ function mainLoop(state, frameTime)
     {
      	drawSnakes(state.snakeList);
         drawFood(state.board);
-        Server.send('score', "/score-" + document.getElementById("user1").value + "-" + state.snakeList[0].length);
-        Server.send('score', "/score-" + document.getElementById("user2").value + "-" + state.snakeList[1].length);
+        Server.send('score', "/score-" + document.getElementById("username").value + "-" + state.snakeList[0].length);
     	setTimeout(mainLoop, frameTime + initTime - d.getTime(), state, frameTime);
     }
 
@@ -641,8 +663,3 @@ function mainLoop(state, frameTime)
     }
 }
 
-function setUsernames()
-{
-    document.getElementById("userSendButton").disabled = true;
-    document.getElementById("startgame").disabled = false;
-}
