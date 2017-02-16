@@ -80,8 +80,66 @@ void gameLoop()
 				}
 			}
 		}
+		if(colisionCheck() || wallCheck())
+		{
+			int winner = winner();
+			for(int i = 0; i < server->getClientIDs().size(); i++)
+			{
+				ostringstream os;
+				os < "/winner-Player " << winner << " is the winner!";
+				server->wsSend(i, os.str());
+			}
+			return;
+		}
+
 		//frame++;
 	}
+}
+
+int winner()
+{
+	int length = 0;
+	int winner = -1;
+	for(int i = 0; i < snakeList.size(); i++)
+	{
+		if(snakeList[i].getLength() > length)
+		{
+			length = snakeList[i].getLength();
+			winner = i;
+		}
+	}
+	return winner;
+}
+
+bool colisionCheck()
+{
+	for(int i = 0; i < snakeList.size(); i++)
+	{
+		std::vector<Coord> snakeCoords = snakeList[i].getSnakePosition();
+		for(int j = 0; j < snakeList.size(); j++)
+		{
+			if(i != j)
+			{
+				for(int k = 0; k < snakeCoords.size(); k++)
+				{
+					if(snakeCoords[k] == snakeList[j].getHead())
+						return true;
+				}
+			}
+		}
+	}
+	return false;
+}
+
+bool wallCheck()
+{
+	for(int i = 0; i < snakeList[i]; i++)
+	{
+		Coord head = snakeList[i].getHead();
+		if(head.x < 0 || head.y < 0 || head.x >= board.getLength() || head.y >= board.getWidth())
+			return true;
+	}
+	return false;
 }
 
 bool inputsReceived()
@@ -121,6 +179,6 @@ void gameMessageHandler(int clientID, std::string message)
     }
     else if(type == "/username")
     {
-    	
+
     }
 }

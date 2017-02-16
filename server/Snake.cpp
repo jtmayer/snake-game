@@ -85,7 +85,19 @@ Coord Snake::getOldTail()
 	return oldTail;
 }
 
-int Snae::getLength()
+int Snake::getLength()
 {
 	return length;
+}
+
+std::vector<Coord> Snake::getSnakePosition()
+{
+	std::vector<Coord> snakeCoords{};
+	Node* current = tail;
+	while(current != nullptr)
+	{
+		snakeCoords.push_back(current->value);
+		current = current->next;
+	}
+	return snakeCoords;
 }

@@ -50,6 +50,8 @@ public:
 
   int getLength();
 
+  std::vector<Coord> getSnakePosition();
+
 private:
   Node* head;
   Node* tail;
