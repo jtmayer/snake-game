@@ -9,7 +9,7 @@
   Tommy Wong 71659011
 */
 
-
+// Client-Server Functions
 var Server;
 
 function log( text )
@@ -71,6 +71,8 @@ function setUsername()
     Server.send('username', "/username-" + document.getElementById("username".value));
     document.getElementById("readyButton").disabled = false;
 }
+
+// Client functions for Canvas
 
 // Todo: Togglable lazy evaluation functionality.
 function makePairType(firstElementName, secondElementName)
@@ -595,7 +597,7 @@ function mainLoop(state, frameTime)
     
     function eventHandler(event)
     {
-	var direciton;
+	var direction;
 	
 	switch (event.keyCode) {
 	case 38: //up
