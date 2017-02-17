@@ -1,18 +1,19 @@
 #include "SnakeGame.hpp"
 
-#include "Snake.hpp"
-#include "Board.hpp"
-#include <exception>
-#include "websocket.h"
-#include <sstream>
-#include <algorithm>
-#include <iostream>
+// #include "Snake.hpp"
+// #include "Board.hpp"
+// #include <exception>
+// #include "websocket.h"
+// #include <sstream>
+// #include <algorithm>
+// #include <iostream>
 
+// NEEDS TO BE OVERHAULED
 Board board{0,0};
-std::vector<Snake> snakeList;
+std::vector<Snake> snakeList{};
 webSocket* _s=nullptr;
 //int frame;
-std::vector<Coord> directions;
+std::vector<Coord> directions{};
 bool gameOver;
 std::map<int, std::string> players;
 std::map<std::string, int> highscores;
@@ -26,14 +27,21 @@ void initializeGame(int length, int width, int num_players, webSocket* s)
 		throw; //std::range_error::range_error{"Number of players has exceeded board size!"};
 	}
 	board = Board{length, width};
+	Board* b = &board;
 	for(int i = 0 ; i < num_players; i++)
 	{
 		Coord c{i, i};
-		snakeList.push_back(Snake{c, &board}); //Temporary starting positions
+		std::cout << "done" << std::endl;
+		Snake s{c, b};
+		std::cout << "done" << std::endl;
+		snakeList.push_back(s); //Temporary starting positions
+		std::cout << "done" << std::endl;
+
 	}
 	directions = std::vector<Coord>(num_players, INVALID);
 	gameOver = false;
 	ready = 0;
+
 	std::cout << "done" << std::endl;
 }
 
@@ -116,6 +124,7 @@ void gameLoop()
 			}
 			gameOver = true;
 			scoring();
+			ready = 0;
 		}
 
 		//frame++;

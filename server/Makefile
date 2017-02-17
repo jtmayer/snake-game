@@ -1,7 +1,7 @@
 CC = g++
-CFLAGS = -c -std=c++11
+CFLAGS = -c -std=c++11 -g
 LDFLAGS =
-SOURCES = main.cpp websocket.cpp sha1.cpp base64.cpp Snake.cpp Board.cpp SnakeGame.cpp
+SOURCES = main.cpp websocket.cpp sha1.cpp base64.cpp Snake.cpp Board.cpp
 OBJECTS = $(SOURCES:.cpp=.o)
 EXECUTABLE = snake_server
 

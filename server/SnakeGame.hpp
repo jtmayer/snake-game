@@ -7,6 +7,7 @@
 #include "websocket.h"
 #include <sstream>
 #include <algorithm>
+#include <iostream>
 
 // Board board{0, 0};
 // std::vector<Snake> snakeList;

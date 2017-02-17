@@ -75,7 +75,6 @@ function connect()
 		snakes.tailList[player] = makeCords(oldTail_x, oldTail_y);
 
 		drawSnakes(snakes.headList, snakes.tailList);
-
 	}
 	else if(type == "/food")
 	{
@@ -100,7 +99,7 @@ function setUsername()
 
 function ready()
 {
-    document.getElementById("ready").disabled = true;
+    document.getElementById("readyButton").disabled = true;
     // clearCanvas();
     Server.send('ready', "/ready-");
     // mainLoop([makeSnake(makeCords(9, 10)), makeSnake(makeCords(7, 10))], null);

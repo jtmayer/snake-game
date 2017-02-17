@@ -19,94 +19,273 @@ Tommy Wong 71659011
 #include <thread>
 #include <fstream>
 #include <map>
-#include "SnakeGame.hpp"
+#include <exception>
+#include <algorithm>
+#include "Snake.hpp"
+#include "Board.hpp"
 
 using namespace std;
 
-webSocket* server = new webSocket{};
-//map<string, int> current_scores;
-map<string, int> user_scores;
+webSocket server;
+map<string, int> userservercores;
 
-// /* called when a client connects */
-// void openHandler(int clientID){
-//     ostringstream os;
-//     if (clientID >= 2)
-//     {
-//         server.wsSend(clientID, "The server is full!");
-//         server.wsClose(clientID);
-//     }
-//     os << "Welcome! You are Player " << clientID;
-//     server.wsSend(clientID, os.str());
-// }
+Board board{0, 0};
+Board* b = nullptr;
+std::vector<Snake> snakeList;
+std::vector<Coord> directions;
+bool gameOver;
+std::map<int, std::string> players;
+std::map<std::string, int> highscores;
+int ready;
 
-// /* called when a client disconnects */
-// void closeHandler(int clientID){
-//     if(clientID < 2)
-//     {
-//         for(int i = 0; i < server->getClientIDs().size(); i++)
-//         {
-//             ostringstream os;
-//             os << "Oh no! Player " << clientID << " disconnected! Game over!";
-//             if(i != clientID)
-//                 server->wsSend(i, os.str());
-//         }
-//     }
-// }
+bool colisionCheck();
+int winner();
+void gameLoop();
+void scoring();
+bool wallCheck();
+bool inputsReceived();
 
-// /* called when a client sends a message to the server */
-// void messageHandler(int clientID, string message){
-//     ostringstream os;
-    
-//     int pos = message.find("-");
-//     string type = message.substr(0, pos);
-//     message = message.substr(pos+1);
+void initializeGame(int length, int width, int num_players)
+{
+    if(num_players > std::min(length, width))
+    {
+        throw; //std::range_error::range_error{"Number of players has exceeded board size!"};
+    }
+    board = Board{length, width};
+    b = &board;
+    for(int i = 0 ; i < num_players; i++)
+    {
+        Coord c{i, i};
+        Snake s{c, b};
+        snakeList.push_back(s); //Temporary starting positions
+    }
+    directions = std::vector<Coord>(num_players, INVALID);
+    gameOver = false;
+    ready = 0;
+}
 
-//     if(type == "/score")
-//     {
-//     	int index = message.find_last_of("-");
-//     	string user = message.substr(0, index);
-//     	int score = stoi(message.substr(index+1));
-//     	if (score > current_scores[user])
-//         {
-//     		current_scores[user] = score;
-//             os << "Score: " << user << " - " << score;
-//     	    server.wsSend(clientID, os.str());
-//         }
-//         if (score > user_scores[user])
-//         {
-//             user_scores[user] = score;
-//         }
-//     }
-//     else if(type == "/start_game")
-//     {
-//         for(auto it = current_scores.begin(); it != current_scores.end(); it++)
-//         {
-//             current_scores[it->first] = 0;
-//         }
-//     }
-// }
+void gameLoop()
+{
+    while(!gameOver)
+    {
+        for(int i = 0; i < directions.size(); i++)
+            directions[i] = INVALID;
 
-// /* called once per select() loop */
-// void periodicHandler(){
-//     static time_t next = time(NULL) + 10;
-//     time_t current = time(NULL);
-//     if (current >= next){
-//         ostringstream os;
-//         string timestring = ctime(&current);
-//         timestring = timestring.substr(0, timestring.size() - 1);
-//         os << timestring;
+        // request all client send input before moving on
+        for(int i = 0; i < server.getClientIDs().size(); i++)
+        {
+            server.wsSend(i, "/input_demand-");// + str(frame));
+        }
 
-//         vector<int> clientIDs = server.getClientIDs();
-//         for (int i = 0; i < clientIDs.size(); i++)
-//             server.wsSend(clientIDs[i], os.str());
+        // while not all input received
+        while(!inputsReceived())
+        {
+            // do nothing
+        }
 
-//         next = time(NULL) + 10;
-//     }
-// }
+        // change directions if any want to be changed
+        for(int i = 0; i < directions.size(); i++)
+        {
+            if(directions[i] != NONE)
+                snakeList[i].changeDirection(directions[i]);
+            directions[i] = INVALID;
+        }
+
+        // update snakes
+        for(int i = 0; i < snakeList.size(); i++)
+        {
+            snakeList[i].update();
+        }
+
+        // send client updated snake coords
+        for(int i = 0; i < server.getClientIDs().size(); i++)
+        {
+            for(int j = 0; j < server.getClientIDs().size(); j++)
+            {
+                Snake s = snakeList[j];
+                std::ostringstream os;
+                Coord head = s.getHead();
+                Coord oldTail = s.getOldTail();
+                os << "/snake-" << j << "-" << head.str() << "-" << oldTail.str() << "-" << s.getLength();
+                server.wsSend(i, os.str());
+            }
+        }
+
+        // send clients item positions
+        bool foodFound = false;
+        for(int i = 0; i < board.getLength(); i++)
+        {
+            for(int j = 0; j < board.getWidth(); j++)
+            {
+                if(board.getItem(i, j) == food)
+                {
+                    std::ostringstream os;
+                    os << "/food-" << i << "," << j;
+                    for(int k = 0; k < server.getClientIDs().size(); k++)
+                        server.wsSend(k, os.str());
+                    foodFound = true;
+                    break;
+                }
+            }
+            if(foodFound)
+                break;
+        }
+
+        // check if game is over
+        if(colisionCheck() || wallCheck())
+        {
+            int w = winner();
+            for(int i = 0; i < server.getClientIDs().size(); i++)
+            {
+                std::ostringstream os;
+                os << "/winner-" << w;
+                server.wsSend(i, os.str());
+            }
+            gameOver = true;
+            scoring();
+            ready = 0;
+        }
+
+        //frame++;
+    }
+}
+
+int winner()
+{
+    int length = 0;
+    int w = -1;
+    for(int i = 0; i < snakeList.size(); i++)
+    {
+        if(snakeList[i].getLength() > length)
+        {
+            length = snakeList[i].getLength();
+            w = i;
+        }
+    }
+    return w;
+}
+
+void scoring()
+{
+    for(int i = 0; i < server.getClientIDs().size(); i++)
+    {
+        std::string player = players[i];
+        if(snakeList[i].getLength() > highscores[player])
+            highscores[player] = snakeList[i].getLength();
+    }
+}
+
+bool colisionCheck()
+{
+    for(int i = 0; i < snakeList.size(); i++)
+    {
+        std::vector<Coord> snakeCoords = snakeList[i].getSnakePosition();
+        for(int j = 0; j < snakeList.size(); j++)
+        {
+            if(i != j)
+            {
+                for(int k = 0; k < snakeCoords.size(); k++)
+                {
+                    if(snakeCoords[k] == snakeList[j].getHead())
+                        return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+bool wallCheck()
+{
+    for(int i = 0; i < snakeList.size(); i++)
+    {
+        Coord head = snakeList[i].getHead();
+        if(head.x < 0 || head.y < 0 || head.x >= board.getLength() || head.y >= board.getWidth())
+            return true;
+    }
+    return false;
+}
+
+bool inputsReceived()
+{
+    for(int i = 0; i < directions.size(); i++)
+    {
+        if(directions[i] == INVALID)
+            return false;
+    }
+    return true;
+}
+
+std::map<std::string, int> getHighscores()
+{
+    return highscores;
+}
+
+void gameMessageHandler(int clientID, std::string message)
+{
+    int pos = message.find("-");
+    string type = message.substr(0, pos);
+    message = message.substr(pos+1);
+
+    if(type == "/direction")
+    {
+        Coord newDirection{};
+        if(message == "left")
+            newDirection = LEFT;
+        else if(message == "right")
+            newDirection = RIGHT;
+        else if(message == "down")
+            newDirection = DOWN;
+        else if(message == "up")
+            newDirection = UP;
+        else
+            newDirection = NONE;
+        directions[clientID] = newDirection;
+    }
+    else if(type == "/ready")
+    {
+        ready++;
+        if(ready >= 2)
+            gameLoop();
+    }
+    else if(type == "/username")
+    {
+        players[clientID] = message;
+    }
+}
+
+void gameOpenHandler(int clientID){
+    std::ostringstream os;
+    if (clientID >= 2)
+    {
+        server.wsSend(clientID, "The server is full!");
+        server.wsClose(clientID);
+    }
+    os << "Welcome! You are Player " << clientID;
+    server.wsSend(clientID, os.str());
+    for(int i = 0; i < clientID; i++)
+        server.wsSend(i, "/welcome-");
+}
+
+void gameCloseHandler(int clientID){
+    if(clientID < 2)
+    {
+        for(int i = 0; i < server.getClientIDs().size(); i++)
+        {
+            std::ostringstream os;
+            os << "Oh no! Player " << clientID << " disconnected! Game over!";
+            if(i != clientID)
+                server.wsSend(i, os.str());
+        }
+        gameOver = true;
+    }
+}
+
+// Server
 
 void serverThread(int port)
 {
-	server->startServer(port);
+	server.startServer(port);
 }
 
 void serverConsoleThread()
@@ -122,7 +301,7 @@ void serverConsoleThread()
 			cin >> input;
 			if(input == "quit")
 			{
-				server->stopServer();
+				server.stopServer();
 				break;
 			}
 			else if(input == "help")
@@ -148,12 +327,12 @@ int main(int argc, char *argv[]){
     cin >> port;
 
     /* set event handler */
-    server->setOpenHandler(gameOpenHandler);
-    server->setCloseHandler(gameCloseHandler);
-    server->setMessageHandler(gameMessageHandler);
+    server.setOpenHandler(gameOpenHandler);
+    server.setCloseHandler(gameCloseHandler);
+    server.setMessageHandler(gameMessageHandler);
     //server.setPeriodicHandler(periodicHandler);
-    
-    initializeGame(25, 25, 2, server);
+
+    initializeGame(25, 25, 2);
     thread t1{serverThread, port};
     thread t2{serverConsoleThread};
 
@@ -170,24 +349,24 @@ int main(int argc, char *argv[]){
         int index = line.find_last_of("-");
         string user = line.substr(0, index);
         int score = stoi(line.substr(index+1, 1));
-        if(user_scores.count(user)>0)
+        if(userservercores.count(user)>0)
         {
-            if (score > user_scores[user])
-                user_scores[user] = score;
+            if (score > userservercores[user])
+                userservercores[user] = score;
         }
         else
-            user_scores[user] = score;
+            userservercores[user] = score;
     }
 
     file.close();
 
     std::map<std::string, int> highscores = getHighscores();
     for(auto it = highscores.begin(); it != highscores.end(); it++)
-        user_scores[it->first] = it->second;
+        userservercores[it->first] = it->second;
 
     std::ofstream outFile;
     outFile.open("highscores.txt", ios::trunc);
-    for(auto it = user_scores.begin(); it != user_scores.end(); it++)
+    for(auto it = userservercores.begin(); it != userservercores.end(); it++)
         outFile << it->first << "-" << it->second << "\n";
     outFile.close();
 

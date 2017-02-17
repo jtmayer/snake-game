@@ -4,8 +4,7 @@ Snake::Snake(Coord starting_pos, Board* board)
 {
 	Node* n = new Node{nullptr, starting_pos};
 	head = n;
-	tail = n;
-	tail->next = head;
+	tail = new Node{head, starting_pos};
 	length = 1;
 	direction = RIGHT;
 	this->board = board;
@@ -14,11 +13,12 @@ Snake::Snake(Coord starting_pos, Board* board)
 Snake::~Snake()
 {
 	Node* current = tail;
+	Node* del = current;
 	while(current != nullptr)
 	{
-		Node* del = current;
+		del = current;
 		current = current->next;
-		//delete del;
+		delete del;
 	}
 }
 

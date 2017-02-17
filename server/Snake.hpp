@@ -5,19 +5,13 @@
 #include <sstream>
 #include <vector>
 #include <string>
+#include <iostream>
 
 struct Coord
 {
-	// Coord()
-	// {
-	// 	x = 0;
-	// 	y = 0;
-	// }
-	// Coord(int x, int y)
-	// {
-	// 	this->x = x;
-	// 	this->y = y;
-	// }
+
+	int x;
+  	int y;
 
 	Coord operator+(Coord coord2)
 	{
@@ -52,17 +46,7 @@ struct Coord
 		os << x << ", " << y;
 		return os.str();
 	}
-  
-  int x;
-  int y;
 };
-
-struct Node
-{
-  Node* next;	
-  Coord value;
-};
-
 
 const Coord UP{0, -1};
 const Coord DOWN{0, 1};
@@ -91,12 +75,20 @@ public:
   std::vector<Coord> getSnakePosition();
 
 private:
-  Node* head;
-  Node* tail;
-  Coord oldTail;
-  int length;
-  Coord direction;
-  Board* board;
+
+	struct Node
+	{
+	  Node* next;	
+	  Coord value;
+	};
+
+
+	Node* head;
+	Node* tail;
+	Coord oldTail;
+	int length;
+	Coord direction;
+	Board* board;
 };
 
 #endif
