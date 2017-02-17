@@ -19,11 +19,11 @@ Tommy Wong 71659011
 #include <thread>
 #include <fstream>
 #include <map>
-#include "SnakeGame.cpp"
+#include "SnakeGame.hpp"
 
 using namespace std;
 
-webSocket server;
+webSocket* server = new webSocket{};
 //map<string, int> current_scores;
 map<string, int> user_scores;
 
@@ -106,7 +106,7 @@ map<string, int> user_scores;
 
 void serverThread(int port)
 {
-	server.startServer(port);
+	server->startServer(port);
 }
 
 void serverConsoleThread()
@@ -122,7 +122,7 @@ void serverConsoleThread()
 			cin >> input;
 			if(input == "quit")
 			{
-				server.stopServer();
+				server->stopServer();
 				break;
 			}
 			else if(input == "help")
@@ -148,12 +148,12 @@ int main(int argc, char *argv[]){
     cin >> port;
 
     /* set event handler */
-    server.setOpenHandler(gameOpenHandler);
-    server.setCloseHandler(gameCloseHandler);
-    server.setMessageHandler(gameMessageHandler);
+    server->setOpenHandler(gameOpenHandler);
+    server->setCloseHandler(gameCloseHandler);
+    server->setMessageHandler(gameMessageHandler);
     //server.setPeriodicHandler(periodicHandler);
-
-    initializeGame(25, 25, 2, &server);
+    
+    initializeGame(25, 25, 2, server);
     thread t1{serverThread, port};
     thread t2{serverConsoleThread};
 

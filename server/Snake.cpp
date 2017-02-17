@@ -1,64 +1,24 @@
 #include "Snake.hpp"
 
-Coord::Coord(int x, int y)
-{
-	this.x = x;
-	this.y = y;
-}
-
-Coord Coord::operator+(Coord coord2)
-{
-	return Coord(x + coord2.x, y + coord2.y);
-}
-
-bool Coord::operator==(Coord coord2)
-{
-	return this.x == coord2.x && this.y == coord2.y;
-}
-
-bool Coord::operator!=(Coord coord2)
-{
-	return !(this == coord2);
-}
-
-Coord Coord::operator+=(Coord coord2)
-{
-	x += coord2.x;
-	y += coord2.y;
-	return this;
-}
-
-Coord Coord::operator-()
-{
-	return Coord{-x, -y};
-}
-
-std::string Coord::str()
-{
-	ostringstream os;
-	os << x << ", " << y;
-	return os.str();
-}
-
-
 Snake::Snake(Coord starting_pos, Board* board)
 {
 	Node* n = new Node{nullptr, starting_pos};
 	head = n;
 	tail = n;
+	tail->next = head;
 	length = 1;
 	direction = RIGHT;
-	this.board = board;
+	this->board = board;
 }
 
 Snake::~Snake()
 {
 	Node* current = tail;
-	while(current != null)
+	while(current != nullptr)
 	{
 		Node* del = current;
 		current = current->next;
-		delete del;
+		//delete del;
 	}
 }
 
@@ -82,8 +42,8 @@ void Snake::update()
 
 void Snake::changeDirection(Coord direction)
 {
-	if(direction != -this.direction || length == 1)
-		this.direction = direction;
+	if(direction != -this->direction || length == 1)
+		this->direction = direction;
 }
 
 Coord Snake::getHead()

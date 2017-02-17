@@ -1,34 +1,40 @@
+#include "SnakeGame.hpp"
+
 #include "Snake.hpp"
 #include "Board.hpp"
 #include <exception>
 #include "websocket.h"
 #include <sstream>
 #include <algorithm>
+#include <iostream>
 
-Board board;
+Board board{0,0};
 std::vector<Snake> snakeList;
-webSocket* server;
+webSocket* _s=nullptr;
 //int frame;
 std::vector<Coord> directions;
 bool gameOver;
 std::map<int, std::string> players;
 std::map<std::string, int> highscores;
+int ready;
 
 void initializeGame(int length, int width, int num_players, webSocket* s)
 {
-	server = s;
+	_s = s;
 	if(num_players > std::min(length, width))
 	{
-		throw std::range_error::range_error{"Number of players has exceeded board size!"};
+		throw; //std::range_error::range_error{"Number of players has exceeded board size!"};
 	}
 	board = Board{length, width};
 	for(int i = 0 ; i < num_players; i++)
 	{
-		snakeList.push_back(Snake{Coord{i, i}, &board}); //Temporary starting positions
+		Coord c{i, i};
+		snakeList.push_back(Snake{c, &board}); //Temporary starting positions
 	}
-	directions = std::vector<Coord>(num_players, NULL);
+	directions = std::vector<Coord>(num_players, INVALID);
 	gameOver = false;
-	//frame = 0;
+	ready = 0;
+	std::cout << "done" << std::endl;
 }
 
 void gameLoop()
@@ -36,12 +42,12 @@ void gameLoop()
 	while(!gameOver)
 	{
 		for(int i = 0; i < directions.size(); i++)
-			directions[i] = NULL;
+			directions[i] = INVALID;
 
 		// request all client send input before moving on
-		for(int i = 0; i < server->getClientIDs().size(); i++)
+		for(int i = 0; i < _s->getClientIDs().size(); i++)
 		{
-			server->wsSend(i, "/input_demand-");// + str(frame));
+			_s->wsSend(i, "/input_demand-");// + str(frame));
 		}
 
 		// while not all input received
@@ -55,7 +61,7 @@ void gameLoop()
 		{
 			if(directions[i] != NONE)
 				snakeList[i].changeDirection(directions[i]);
-			directions[i] = NULL;
+			directions[i] = INVALID;
 		}
 
 		// update snakes
@@ -65,16 +71,16 @@ void gameLoop()
 		}
 
 		// send client updated snake coords
-		for(int i = 0; i < server->getClientIDs().size(); i++)
+		for(int i = 0; i < _s->getClientIDs().size(); i++)
 		{
-			for(int j = 0; j < server->getClientIDs().size(); j++)
+			for(int j = 0; j < _s->getClientIDs().size(); j++)
 			{
 				Snake s = snakeList[j];
 				std::ostringstream os;
 				Coord head = s.getHead();
 				Coord oldTail = s.getOldTail();
 				os << "/snake-" << j << "-" << head.str() << "-" << oldTail.str() << "-" << s.getLength();
-				server->wsSend(i, os.str());
+				_s->wsSend(i, os.str());
 			}
 		}
 
@@ -86,10 +92,10 @@ void gameLoop()
 			{
 				if(board.getItem(i, j) == food)
 				{
-					ostringstream os;
+					std::ostringstream os;
 					os << "/food-" << i << "," << j;
-					for(int k = 0; k < server->getClientIDs.size(); k++)
-						server->wsSend(k, os.str());
+					for(int k = 0; k < _s->getClientIDs().size(); k++)
+						_s->wsSend(k, os.str());
 					foodFound = true;
 					break;
 				}
@@ -101,15 +107,15 @@ void gameLoop()
 		// check if game is over
 		if(colisionCheck() || wallCheck())
 		{
-			int winner = winner();
-			for(int i = 0; i < server->getClientIDs().size(); i++)
+			int w = winner();
+			for(int i = 0; i < _s->getClientIDs().size(); i++)
 			{
-				ostringstream os;
-				os < "/winner-" << winner;
-				server->wsSend(i, os.str());
+				std::ostringstream os;
+				os << "/winner-" << w;
+				_s->wsSend(i, os.str());
 			}
 			gameOver = true;
-			scoring()
+			scoring();
 		}
 
 		//frame++;
@@ -119,21 +125,21 @@ void gameLoop()
 int winner()
 {
 	int length = 0;
-	int winner = -1;
+	int w = -1;
 	for(int i = 0; i < snakeList.size(); i++)
 	{
 		if(snakeList[i].getLength() > length)
 		{
 			length = snakeList[i].getLength();
-			winner = i;
+			w = i;
 		}
 	}
-	return winner;
+	return w;
 }
 
 void scoring()
 {
-	for(int i = 0; i < server->getClientIDs().size(); i++)
+	for(int i = 0; i < _s->getClientIDs().size(); i++)
 	{
 		std::string player = players[i];
 		if(snakeList[i].getLength() > highscores[player])
@@ -163,7 +169,7 @@ bool colisionCheck()
 
 bool wallCheck()
 {
-	for(int i = 0; i < snakeList[i]; i++)
+	for(int i = 0; i < snakeList.size(); i++)
 	{
 		Coord head = snakeList[i].getHead();
 		if(head.x < 0 || head.y < 0 || head.x >= board.getLength() || head.y >= board.getWidth())
@@ -176,7 +182,7 @@ bool inputsReceived()
 {
 	for(int i = 0; i < directions.size(); i++)
 	{
-		if(directions[i] == NULL)
+		if(directions[i] == INVALID)
 			return false;
 	}
 	return true;
@@ -210,34 +216,38 @@ void gameMessageHandler(int clientID, std::string message)
     }
     else if(type == "/ready")
     {
-
+    	ready++;
+    	if(ready >= 2)
+    		gameLoop();
     }
     else if(type == "/username")
     {
-
+    	players[clientID] = message;
     }
 }
 
 void gameOpenHandler(int clientID){
-    ostringstream os;
+    std::ostringstream os;
     if (clientID >= 2)
     {
-        server.wsSend(clientID, "The server is full!");
-        server.wsClose(clientID);
+        _s->wsSend(clientID, "The _s is full!");
+        _s->wsClose(clientID);
     }
     os << "Welcome! You are Player " << clientID;
-    server.wsSend(clientID, os.str());
+    _s->wsSend(clientID, os.str());
+    for(int i = 0; i < clientID; i++)
+    	_s->wsSend(i, "/welcome-");
 }
 
 void gameCloseHandler(int clientID){
     if(clientID < 2)
     {
-        for(int i = 0; i < server->getClientIDs().size(); i++)
+        for(int i = 0; i < _s->getClientIDs().size(); i++)
         {
-            ostringstream os;
+            std::ostringstream os;
             os << "Oh no! Player " << clientID << " disconnected! Game over!";
             if(i != clientID)
-                server->wsSend(i, os.str());
+                _s->wsSend(i, os.str());
         }
         gameOver = true;
     }

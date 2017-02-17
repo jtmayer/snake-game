@@ -4,12 +4,12 @@
 Board::Board(int length, int width)
 {
   board = std::vector<std::vector<int>>(length);
-  for(int i = 0; i < length; it++)
+  for(int i = 0; i < length; i++)
   {
     board[i] = std::vector<int>(width, 0);
   }
-  this.length = length;
-  this.width = width;
+  this->length = length;
+  this->width = width;
 }
 
 void Board::addItem(int item)

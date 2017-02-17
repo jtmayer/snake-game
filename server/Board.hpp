@@ -1,6 +1,8 @@
 #ifndef BOARD_HPP
 #define BOARD_HPP
 
+#include <vector>
+
 enum Item {empty, food, powerUp};
 
 class Board

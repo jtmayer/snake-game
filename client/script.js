@@ -27,6 +27,7 @@ function connect()
     log('Connecting...');
     Server = new FancyWebSocket('ws://' + document.getElementById('ip').value + ':' + document.getElementById('port').value);
 
+	document.addEventListener("keydown", eventHandler);
     //Let the user know we're connected
     Server.bind('open', function() {
         document.getElementById("cntBtn").disabled = true;
@@ -55,10 +56,30 @@ function connect()
 	}
 	else if(type == "/snake")
 	{
+		index = message.indexOf("-");
+		var player = message.substring(0, index);
+		player = parseInt(player);
+		message = message.substring(index+1);
+		index = message.indexOf("-");
+		var head = message.substring(0, index)
+		message = message.substring(index+1);
+		index = message.indexOf("-");
+		var oldTail = message.substring(0, index);
+		var length = message.substring(index+1);
+		index = head.indexOf(",");
+		var head_x = head.substring(0, index);
+		var head_y = head.substring(index+2);
+		snakes.headList[player] = makeCords(head_x, head_y);
+		var oldTail_x = oldTail.substring(0, index);
+		var oldTail_y = oldTail.substring(index+2);
+		snakes.tailList[player] = makeCords(oldTail_x, oldTail_y);
+
+		drawSnakes(snakes.headList, snakes.tailList);
 
 	}
 	else if(type == "/food")
 	{
+
 
 	}
 	else if(type == "/winner")
@@ -88,6 +109,48 @@ function ready()
 
 // Client functions for Canvas
 
+// Creates a cords object.
+var makeCords = makePairType("x", "y");
+
+headList = new Array(2)
+tailList = new Array(2)
+
+var snakes = {
+	"headList" : headList,
+	"tailList" : tailList
+}
+
+function eventHandler(event)
+{	
+	switch (event.keyCode) {
+		case 38: //up
+		    direction = "up";
+		    break;
+		case 40: //down
+		    direction = "down";
+		    break;
+		case 37:  //left
+		    direction = "left";
+		    break;
+		case 39: //right
+		    direction = "right";
+		    break;
+		case 87: //up2
+		    direction = "up";
+		    break;
+		case 83: //down2
+		    direction = "down";
+		    break;
+		case 65:  //left2
+		    direction = "left";
+		    break;
+		case 68: //right2
+		    direction = "right";
+		    break;
+		default:
+	}
+}
+
 // Todo: Togglable lazy evaluation functionality.
 function makePairType(firstElementName, secondElementName)
 {
@@ -111,6 +174,83 @@ function makePairType(firstElementName, secondElementName)
     };
 }
 
+function drawSnakes(headList, oldTailList)
+{
+    for (var i in oldTailList)
+    {
+	if (oldTailList[i] != null) {
+	    drawPixel(oldTailList[i], "#FFFFFF");
+	}
+    }
+
+    for (var i in headList)
+    {
+		drawPixel(headList[i], "#000000");
+    }
+}
+
+function generateCanvasDependencies(canvas, scaling)
+{
+    var context =canvas.getContext("2d");
+    var boardWidth = canvas.width / scaling;
+    var boardHeight = canvas.height / scaling;
+    
+    return [
+	// drawPixel
+	function(cords, color)
+	{
+	    context.fillStyle = color;
+	    context.fillRect(cords.x * scaling,
+			     cords.y * scaling,
+			     scaling,
+			     scaling);
+	},
+
+	// makeEmptyBoard
+	function()
+	{
+	    var board = new Array(boardWidth);
+	    for (var i = 0; i < boardWidth; ++i) {
+		board[i] = new Array(boardHeight);
+		
+		for (var j = 0; j < boardHeight; ++j)
+		{
+		    board[i][j] = null;
+		}
+	    }
+	    
+	    return board;
+	},
+
+	    // isCordsOnBoard
+	    function(cords)
+	    {
+		// return cords.x >= 0 && cords.y >= 0 && cords.x < boardWidth && cords.y < boardHeight;
+		return every(isInBounds,
+			     pairToArray(cords),
+			     [0, 0],
+			     map(dec, [boardWidth, boardHeight]));
+	    },
+
+	    // generateCordsOnBoard
+	    function()
+	    {
+		return makeCords(Math.floor(Math.random() * boardWidth),
+				 Math.floor(Math.random() * boardHeight));
+	    },
+
+	    // clearCanvas
+	    function()
+	    {
+		context.fillStyle = "#FFFFFF";
+		context.fillRect(0, 0, canvas.width, canvas.height);
+	    }];
+}
+
+var canvasDependencies = generateCanvasDependencies(document.getElementById("a"), 10);
+var drawPixel = canvasDependencies[0];
+
+/*
 function isPair(x)
 {
     var propCount = 0;
@@ -338,66 +478,9 @@ function dec(val)
     return --val;
 }
 
-function generateCanvasDependencies(canvas, scaling)
-{
-    var context =canvas.getContext("2d");
-    var boardWidth = canvas.width / scaling;
-    var boardHeight = canvas.height / scaling;
-    
-    return [
-	// drawPixel
-	function(cords, color)
-	{
-	    context.fillStyle = color;
-	    context.fillRect(cords.x * scaling,
-			     cords.y * scaling,
-			     scaling,
-			     scaling);
-	},
 
-	// makeEmptyBoard
-	function()
-	{
-	    var board = new Array(boardWidth);
-	    for (var i = 0; i < boardWidth; ++i) {
-		board[i] = new Array(boardHeight);
-		
-		for (var j = 0; j < boardHeight; ++j)
-		{
-		    board[i][j] = null;
-		}
-	    }
-	    
-	    return board;
-	},
 
-	    // isCordsOnBoard
-	    function(cords)
-	    {
-		// return cords.x >= 0 && cords.y >= 0 && cords.x < boardWidth && cords.y < boardHeight;
-		return every(isInBounds,
-			     pairToArray(cords),
-			     [0, 0],
-			     map(dec, [boardWidth, boardHeight]));
-	    },
 
-	    // generateCordsOnBoard
-	    function()
-	    {
-		return makeCords(Math.floor(Math.random() * boardWidth),
-				 Math.floor(Math.random() * boardHeight));
-	    },
-
-	    // clearCanvas
-	    function()
-	    {
-		context.fillStyle = "#FFFFFF";
-		context.fillRect(0, 0, canvas.width, canvas.height);
-	    }];
-}
-
-var canvasDependencies = generateCanvasDependencies(document.getElementById("a"), 10);
-var drawPixel = canvasDependencies[0];
 
 // var drawPixel = function (cords, canvas, color)
 // {
@@ -411,23 +494,6 @@ var makeEmptyBoard = canvasDependencies[1];
 var generateCordsOnBoard = canvasDependencies[3];
 var clearCanvas = canvasDependencies[4];
 
-function drawSnakes(snakeList)
-{
-    for (var i in snakeList)
-    {
-	if (snakeList[i].oldTail != null) {
-	    drawPixel(snakeList[i].oldTail, "#FFFFFF");
-	}
-    }
-
-    for (var i in snakeList)
-    {
-	drawPixel(snakeList[i].head.val, "#000000");
-    }
-}
-
-// Creates a cords object.
-var makeCords = makePairType("x", "y");
 
 var up = makeCords(0, -1);
 var down = makeCords(0, 1);
@@ -670,4 +736,5 @@ function mainLoop(state, frameTime)
 	document.getElementById("userSendButton").disabled = false;
     }
 }
+*/
 
