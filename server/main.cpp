@@ -19,89 +19,90 @@ Tommy Wong 71659011
 #include <thread>
 #include <fstream>
 #include <map>
+#include "SnakeGame.cpp"
 
 using namespace std;
 
 webSocket server;
-map<string, int> current_scores;
+//map<string, int> current_scores;
 map<string, int> user_scores;
 
-/* called when a client connects */
-void openHandler(int clientID){
-    ostringstream os;
-    if (clientID >= 2)
-    {
-        server.wsSend(clientID, "The server is full!");
-        server.wsClose(clientID);
-    }
-    os << "Welcome! You are Player " << clientID;
-    server.wsSend(clientID, os.str());
-}
+// /* called when a client connects */
+// void openHandler(int clientID){
+//     ostringstream os;
+//     if (clientID >= 2)
+//     {
+//         server.wsSend(clientID, "The server is full!");
+//         server.wsClose(clientID);
+//     }
+//     os << "Welcome! You are Player " << clientID;
+//     server.wsSend(clientID, os.str());
+// }
 
-/* called when a client disconnects */
-void closeHandler(int clientID){
-    if(clientID < 2)
-    {
-        for(int i = 0; i < server->getClientIDs().size(); i++)
-        {
-            ostringstream os;
-            os << "Oh no! Player " << clientID << " disconnected! Game over!";
-            if(i != clientID)
-                server->wsSend(i, os.str());
-        }
-    }
-}
+// /* called when a client disconnects */
+// void closeHandler(int clientID){
+//     if(clientID < 2)
+//     {
+//         for(int i = 0; i < server->getClientIDs().size(); i++)
+//         {
+//             ostringstream os;
+//             os << "Oh no! Player " << clientID << " disconnected! Game over!";
+//             if(i != clientID)
+//                 server->wsSend(i, os.str());
+//         }
+//     }
+// }
 
-/* called when a client sends a message to the server */
-void messageHandler(int clientID, string message){
-    ostringstream os;
+// /* called when a client sends a message to the server */
+// void messageHandler(int clientID, string message){
+//     ostringstream os;
     
-    int pos = message.find("-");
-    string type = message.substr(0, pos);
-    message = message.substr(pos+1);
+//     int pos = message.find("-");
+//     string type = message.substr(0, pos);
+//     message = message.substr(pos+1);
 
-    if(type == "/score")
-    {
-    	int index = message.find_last_of("-");
-    	string user = message.substr(0, index);
-    	int score = stoi(message.substr(index+1));
-    	if (score > current_scores[user])
-        {
-    		current_scores[user] = score;
-            os << "Score: " << user << " - " << score;
-    	    server.wsSend(clientID, os.str());
-        }
-        if (score > user_scores[user])
-        {
-            user_scores[user] = score;
-        }
-    }
-    else if(type == "/start_game")
-    {
-        for(auto it = current_scores.begin(); it != current_scores.end(); it++)
-        {
-            current_scores[it->first] = 0;
-        }
-    }
-}
+//     if(type == "/score")
+//     {
+//     	int index = message.find_last_of("-");
+//     	string user = message.substr(0, index);
+//     	int score = stoi(message.substr(index+1));
+//     	if (score > current_scores[user])
+//         {
+//     		current_scores[user] = score;
+//             os << "Score: " << user << " - " << score;
+//     	    server.wsSend(clientID, os.str());
+//         }
+//         if (score > user_scores[user])
+//         {
+//             user_scores[user] = score;
+//         }
+//     }
+//     else if(type == "/start_game")
+//     {
+//         for(auto it = current_scores.begin(); it != current_scores.end(); it++)
+//         {
+//             current_scores[it->first] = 0;
+//         }
+//     }
+// }
 
-/* called once per select() loop */
-void periodicHandler(){
-    static time_t next = time(NULL) + 10;
-    time_t current = time(NULL);
-    if (current >= next){
-        ostringstream os;
-        string timestring = ctime(&current);
-        timestring = timestring.substr(0, timestring.size() - 1);
-        os << timestring;
+// /* called once per select() loop */
+// void periodicHandler(){
+//     static time_t next = time(NULL) + 10;
+//     time_t current = time(NULL);
+//     if (current >= next){
+//         ostringstream os;
+//         string timestring = ctime(&current);
+//         timestring = timestring.substr(0, timestring.size() - 1);
+//         os << timestring;
 
-        vector<int> clientIDs = server.getClientIDs();
-        for (int i = 0; i < clientIDs.size(); i++)
-            server.wsSend(clientIDs[i], os.str());
+//         vector<int> clientIDs = server.getClientIDs();
+//         for (int i = 0; i < clientIDs.size(); i++)
+//             server.wsSend(clientIDs[i], os.str());
 
-        next = time(NULL) + 10;
-    }
-}
+//         next = time(NULL) + 10;
+//     }
+// }
 
 void serverThread(int port)
 {
@@ -147,16 +148,14 @@ int main(int argc, char *argv[]){
     cin >> port;
 
     /* set event handler */
-    server.setOpenHandler(openHandler);
-    server.setCloseHandler(closeHandler);
-    server.setMessageHandler(messageHandler);
+    server.setOpenHandler(gameOpenHandler);
+    server.setCloseHandler(gameCloseHandler);
+    server.setMessageHandler(gameMessageHandler);
     //server.setPeriodicHandler(periodicHandler);
 
+    initializeGame(25, 25, 2, &server);
     thread t1{serverThread, port};
     thread t2{serverConsoleThread};
-
-	time_t now = time(0);
-	string date_time = ctime(&now);
 
     t1.join();
     t2.join();
@@ -181,6 +180,10 @@ int main(int argc, char *argv[]){
     }
 
     file.close();
+
+    std::map<std::string, int> highscores = getHighscores();
+    for(auto it = highscores.begin(); it != highscores.end(); it++)
+        user_scores[it->first] = it->second;
 
     std::ofstream outFile;
     outFile.open("highscores.txt", ios::trunc);

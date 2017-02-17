@@ -11,6 +11,7 @@
 
 // Client-Server Functions
 var Server;
+var direction;
 
 function log( text )
 {
@@ -50,6 +51,7 @@ function connect()
 	if(type == "/input_demand")
 	{
 		Server.send('input_demand', "/direction-" + direction);
+		direction = "none";
 	}
 	else if(type == "/snake")
 	{
@@ -59,17 +61,29 @@ function connect()
 	{
 
 	}
+	else if(type == "/winner")
+	{
+
+	}
     });
 
     Server.connect();
 }
-
 
 function setUsername()
 {
     document.getElementById("setUsernameButton").disabled = true;
     Server.send('username', "/username-" + document.getElementById("username".value));
     document.getElementById("readyButton").disabled = false;
+}
+
+function ready()
+{
+    document.getElementById("ready").disabled = true;
+    // clearCanvas();
+    Server.send('ready', "/ready-");
+    // mainLoop([makeSnake(makeCords(9, 10)), makeSnake(makeCords(7, 10))], null);
+    reset();
 }
 
 // Client functions for Canvas
@@ -581,14 +595,6 @@ function changeDirection(snake, direction) {
 //     for (event 
 // }
 
-function ready()
-{
-    document.getElementById("ready").disabled = true;
-    // clearCanvas();
-    Server.send('ready', "/ready-");
-    // mainLoop([makeSnake(makeCords(9, 10)), makeSnake(makeCords(7, 10))], null);
-    reset();
-}
 
 function mainLoop(state, frameTime)
 {

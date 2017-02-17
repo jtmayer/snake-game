@@ -40,6 +40,8 @@ class Snake
 public:
   Snake(Coord c, Board* board);
 
+  ~Snake();
+
   void update();
 
   void changeDirection(Coord direction);

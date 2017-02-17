@@ -47,8 +47,19 @@ Snake::Snake(Coord starting_pos, Board* board)
 	head = n;
 	tail = n;
 	length = 1;
-	direction = Coord{1, 0};
+	direction = RIGHT;
 	this.board = board;
+}
+
+Snake::~Snake()
+{
+	Node* current = tail;
+	while(current != null)
+	{
+		Node* del = current;
+		current = current->next;
+		delete del;
+	}
 }
 
 void Snake::update()
