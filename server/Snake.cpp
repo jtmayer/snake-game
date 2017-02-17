@@ -4,7 +4,7 @@ Snake::Snake(Coord starting_pos, Board* board)
 {
 	Node* n = new Node{nullptr, starting_pos};
 	head = n;
-	tail = new Node{head, starting_pos};
+	tail = n;
 	length = 1;
 	direction = RIGHT;
 	this->board = board;

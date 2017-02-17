@@ -31,12 +31,13 @@ map<string, int> userservercores;
 
 Board board{0, 0};
 Board* b = nullptr;
-std::vector<Snake> snakeList;
+std::vector<Snake*> snakeList;
 std::vector<Coord> directions;
 bool gameOver;
 std::map<int, std::string> players;
 std::map<std::string, int> highscores;
 int ready;
+int test = 0;
 
 bool colisionCheck();
 int winner();
@@ -57,7 +58,8 @@ void initializeGame(int length, int width, int num_players)
     {
         Coord c{i, i};
         Snake s{c, b};
-        snakeList.push_back(s); //Temporary starting positions
+        Snake* sp = &s;
+        snakeList.push_back(sp); //Temporary starting positions
     }
     directions = std::vector<Coord>(num_players, INVALID);
     gameOver = false;
@@ -68,6 +70,8 @@ void gameLoop()
 {
     while(!gameOver)
     {
+        std::cout << test << std::endl;
+        test++;
         for(int i = 0; i < directions.size(); i++)
             directions[i] = INVALID;
 
@@ -87,14 +91,14 @@ void gameLoop()
         for(int i = 0; i < directions.size(); i++)
         {
             if(directions[i] != NONE)
-                snakeList[i].changeDirection(directions[i]);
+                snakeList[i]->changeDirection(directions[i]);
             directions[i] = INVALID;
         }
 
         // update snakes
         for(int i = 0; i < snakeList.size(); i++)
         {
-            snakeList[i].update();
+            snakeList[i]->update();
         }
 
         // send client updated snake coords
@@ -102,7 +106,7 @@ void gameLoop()
         {
             for(int j = 0; j < server.getClientIDs().size(); j++)
             {
-                Snake s = snakeList[j];
+                Snake s = *snakeList[j];
                 std::ostringstream os;
                 Coord head = s.getHead();
                 Coord oldTail = s.getOldTail();
@@ -156,9 +160,9 @@ int winner()
     int w = -1;
     for(int i = 0; i < snakeList.size(); i++)
     {
-        if(snakeList[i].getLength() > length)
+        if(snakeList[i]->getLength() > length)
         {
-            length = snakeList[i].getLength();
+            length = snakeList[i]->getLength();
             w = i;
         }
     }
@@ -170,8 +174,8 @@ void scoring()
     for(int i = 0; i < server.getClientIDs().size(); i++)
     {
         std::string player = players[i];
-        if(snakeList[i].getLength() > highscores[player])
-            highscores[player] = snakeList[i].getLength();
+        if(snakeList[i]->getLength() > highscores[player])
+            highscores[player] = snakeList[i]->getLength();
     }
 }
 
@@ -179,14 +183,14 @@ bool colisionCheck()
 {
     for(int i = 0; i < snakeList.size(); i++)
     {
-        std::vector<Coord> snakeCoords = snakeList[i].getSnakePosition();
+        std::vector<Coord> snakeCoords = snakeList[i]->getSnakePosition();
         for(int j = 0; j < snakeList.size(); j++)
         {
             if(i != j)
             {
                 for(int k = 0; k < snakeCoords.size(); k++)
                 {
-                    if(snakeCoords[k] == snakeList[j].getHead())
+                    if(snakeCoords[k] == snakeList[j]->getHead())
                         return true;
                 }
             }
@@ -199,7 +203,7 @@ bool wallCheck()
 {
     for(int i = 0; i < snakeList.size(); i++)
     {
-        Coord head = snakeList[i].getHead();
+        Coord head = snakeList[i]->getHead();
         if(head.x < 0 || head.y < 0 || head.x >= board.getLength() || head.y >= board.getWidth())
             return true;
     }
@@ -229,6 +233,7 @@ void gameMessageHandler(int clientID, std::string message)
 
     if(type == "/direction")
     {
+        std::cout << message << std::endl;
         Coord newDirection{};
         if(message == "left")
             newDirection = LEFT;
@@ -332,7 +337,7 @@ int main(int argc, char *argv[]){
     server.setMessageHandler(gameMessageHandler);
     //server.setPeriodicHandler(periodicHandler);
 
-    initializeGame(25, 25, 2);
+    initializeGame(50, 50, 2);
     thread t1{serverThread, port};
     thread t2{serverConsoleThread};
 

@@ -12,6 +12,7 @@
 // Client-Server Functions
 var Server;
 var direction;
+document.addEventListener("keydown", eventHandler);
 
 function log( text )
 {
@@ -27,7 +28,6 @@ function connect()
     log('Connecting...');
     Server = new FancyWebSocket('ws://' + document.getElementById('ip').value + ':' + document.getElementById('port').value);
 
-	document.addEventListener("keydown", eventHandler);
     //Let the user know we're connected
     Server.bind('open', function() {
         document.getElementById("cntBtn").disabled = true;
@@ -99,11 +99,11 @@ function setUsername()
 
 function ready()
 {
-    document.getElementById("readyButton").disabled = true;
+    document.getElementById("readyButtons").disabled = true;
     // clearCanvas();
     Server.send('ready', "/ready-");
     // mainLoop([makeSnake(makeCords(9, 10)), makeSnake(makeCords(7, 10))], null);
-    reset();
+    //reset();
 }
 
 // Client functions for Canvas
