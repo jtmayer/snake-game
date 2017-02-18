@@ -11,7 +11,7 @@
 
 // Client-Server Functions
 var Server;
-var direction;
+var direction = "none";
 document.addEventListener("keydown", eventHandler);
 
 function log( text )
@@ -78,6 +78,11 @@ function connect()
 	}
 	else if(type == "/food")
 	{
+		index = message.indexOf(",");
+		var food_x = message.substring(0, index);
+		var food_y = message.substring(index+2);
+		var coords = makeCords(food_x, food_y);
+		drawPixel(coords, "#FFF000")
 
 
 	}

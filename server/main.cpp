@@ -56,9 +56,8 @@ void initializeGame(int length, int width, int num_players)
     b = &board;
     for(int i = 0 ; i < num_players; i++)
     {
-        Coord c{i, i};
-        Snake s{c, b};
-        Snake* sp = &s;
+        Coord c{5*(i+1), 5*(i+1)};
+        Snake* sp = new Snake{c, b};
         snakeList.push_back(sp); //Temporary starting positions
     }
     directions = std::vector<Coord>(num_players, INVALID);
@@ -68,90 +67,97 @@ void initializeGame(int length, int width, int num_players)
 
 void gameLoop()
 {
-    while(!gameOver)
+    //while(!gameOver)
+    //{
+    if(gameOver)
+        return;
+
+    std::cout << test << std::endl;
+    test++;
+
+    // request all client send input before moving on
+
+    // while not all input received
+    std::cout << "input" << endl;
+    // while(!inputsReceived())
+    // {
+    //     // do nothing
+    // }
+    if (!inputsReceived())
+        return;
+    std::cout << "not client" << endl; 
+
+    // change directions if any want to be changed
+    for(int i = 0; i < directions.size(); i++)
     {
-        std::cout << test << std::endl;
-        test++;
-        for(int i = 0; i < directions.size(); i++)
-            directions[i] = INVALID;
-
-        // request all client send input before moving on
-        for(int i = 0; i < server.getClientIDs().size(); i++)
-        {
-            server.wsSend(i, "/input_demand-");// + str(frame));
-        }
-
-        // while not all input received
-        while(!inputsReceived())
-        {
-            // do nothing
-        }
-
-        // change directions if any want to be changed
-        for(int i = 0; i < directions.size(); i++)
-        {
-            if(directions[i] != NONE)
-                snakeList[i]->changeDirection(directions[i]);
-            directions[i] = INVALID;
-        }
-
-        // update snakes
-        for(int i = 0; i < snakeList.size(); i++)
-        {
-            snakeList[i]->update();
-        }
-
-        // send client updated snake coords
-        for(int i = 0; i < server.getClientIDs().size(); i++)
-        {
-            for(int j = 0; j < server.getClientIDs().size(); j++)
-            {
-                Snake s = *snakeList[j];
-                std::ostringstream os;
-                Coord head = s.getHead();
-                Coord oldTail = s.getOldTail();
-                os << "/snake-" << j << "-" << head.str() << "-" << oldTail.str() << "-" << s.getLength();
-                server.wsSend(i, os.str());
-            }
-        }
-
-        // send clients item positions
-        bool foodFound = false;
-        for(int i = 0; i < board.getLength(); i++)
-        {
-            for(int j = 0; j < board.getWidth(); j++)
-            {
-                if(board.getItem(i, j) == food)
-                {
-                    std::ostringstream os;
-                    os << "/food-" << i << "," << j;
-                    for(int k = 0; k < server.getClientIDs().size(); k++)
-                        server.wsSend(k, os.str());
-                    foodFound = true;
-                    break;
-                }
-            }
-            if(foodFound)
-                break;
-        }
-
-        // check if game is over
-        if(colisionCheck() || wallCheck())
-        {
-            int w = winner();
-            for(int i = 0; i < server.getClientIDs().size(); i++)
-            {
-                std::ostringstream os;
-                os << "/winner-" << w;
-                server.wsSend(i, os.str());
-            }
-            gameOver = true;
-            scoring();
-            ready = 0;
-        }
-
-        //frame++;
+        if(directions[i] != NONE)
+            snakeList[i]->changeDirection(directions[i]);
+        directions[i] = INVALID;
     }
+
+    // update snakes
+    for(int i = 0; i < snakeList.size(); i++)
+    {
+        snakeList[i]->update();
+    }
+
+    // send client updated snake coords
+    for(int i = 0; i < server.getClientIDs().size(); i++)
+    {
+        for(int j = 0; j < server.getClientIDs().size(); j++)
+        {
+            Snake* s = snakeList[j];
+            std::ostringstream os;
+            Coord head = s->getHead();
+            Coord oldTail = s->getOldTail();
+            os << "/snake-" << j << "-" << head.str() << "-" << oldTail.str() << "-" << s->getLength();
+            server.wsSend(i, os.str());
+        }
+    }
+
+    if(colisionCheck() || wallCheck())
+    {
+        int w = winner();
+        for(int i = 0; i < server.getClientIDs().size(); i++)
+        {
+            std::ostringstream os;
+            os << "/winner-" << w;
+            server.wsSend(i, os.str());
+        }
+        gameOver = true;
+        scoring();
+        ready = 0;
+        return;
+    }
+
+    // send clients item positions
+    bool foodFound = false;
+    for(int i = 0; i < board.getLength(); i++)
+    {
+        for(int j = 0; j < board.getWidth(); j++)
+        {
+            if(board.getItem(i, j) == food)
+            {
+                std::ostringstream os;
+                os << "/food-" << i << "," << j;
+                for(int k = 0; k < server.getClientIDs().size(); k++)
+                    server.wsSend(k, os.str());
+                foodFound = true;
+                break;
+            }
+        }
+        if(foodFound)
+            break;
+    }
+
+    // check if game is over
+
+    for(int i = 0; i < server.getClientIDs().size(); i++)
+    {
+        server.wsSend(i, "/input_demand-");// + str(frame));
+    }
+    //frame++;
+    //}
 }
 
 int winner()
@@ -227,6 +233,7 @@ std::map<std::string, int> getHighscores()
 
 void gameMessageHandler(int clientID, std::string message)
 {
+    std::cout << message << std::endl;
     int pos = message.find("-");
     string type = message.substr(0, pos);
     message = message.substr(pos+1);
@@ -246,12 +253,21 @@ void gameMessageHandler(int clientID, std::string message)
         else
             newDirection = NONE;
         directions[clientID] = newDirection;
+        chrono::nanoseconds delay{100000000};
+        this_thread::sleep_for(delay);
+        gameLoop();
     }
     else if(type == "/ready")
     {
         ready++;
         if(ready >= 2)
+        {
+            for(int i = 0; i < server.getClientIDs().size(); i++)
+            {
+                server.wsSend(i, "/input_demand-");// + str(frame));
+            }
             gameLoop();
+        }
     }
     else if(type == "/username")
     {
