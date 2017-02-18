@@ -24,7 +24,8 @@ Snake::~Snake()
 
 void Snake::update()
 {
-	head = head->next = new Node{nullptr, head->value + direction};
+	head->next = new Node{nullptr, head->value + direction};
+	head = head->next;
 	int x = head->value.x;
 	int y = head->value.y;
 	if(board->getItem(x, y) == food) // Check for food

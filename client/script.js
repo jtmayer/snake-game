@@ -75,6 +75,7 @@ function connect()
 		snakes.tailList[player] = makeCords(oldTail_x, oldTail_y);
 
 		drawSnakes(snakes.headList, snakes.tailList);
+		log("Player " + player + " - Score: " + length);
 	}
 	else if(type == "/food")
 	{
@@ -98,7 +99,7 @@ function connect()
 function setUsername()
 {
     document.getElementById("setUsernameButton").disabled = true;
-    Server.send('username', "/username-" + document.getElementById("username".value));
+    Server.send('username', "/username-" + document.getElementById("username").value);
     document.getElementById("readyButton").disabled = false;
 }
 

@@ -14,8 +14,8 @@ Board::Board(int length, int width)
 
 void Board::addItem(int item)
 {
-  int x = rand() * length;
-  int y = rand() * width;
+  int x = rand() % length;
+  int y = rand() % width;
   board[x][y] = item;
 }
 

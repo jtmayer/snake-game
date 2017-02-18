@@ -53,6 +53,7 @@ void initializeGame(int length, int width, int num_players)
         throw; //std::range_error::range_error{"Number of players has exceeded board size!"};
     }
     board = Board{length, width};
+    board.setItem(25, 25, food);
     b = &board;
     for(int i = 0 ; i < num_players; i++)
     {
@@ -139,7 +140,7 @@ void gameLoop()
             if(board.getItem(i, j) == food)
             {
                 std::ostringstream os;
-                os << "/food-" << i << "," << j;
+                os << "/food-" << i << ", " << j;
                 for(int k = 0; k < server.getClientIDs().size(); k++)
                     server.wsSend(k, os.str());
                 foodFound = true;
@@ -210,7 +211,7 @@ bool wallCheck()
     for(int i = 0; i < snakeList.size(); i++)
     {
         Coord head = snakeList[i]->getHead();
-        if(head.x < 0 || head.y < 0 || head.x >= board.getLength() || head.y >= board.getWidth())
+        if(head.x < 0 || head.y < 0 || head.x >= board.getLength()-1 || head.y >= board.getWidth()-1)
             return true;
     }
     return false;
