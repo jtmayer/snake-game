@@ -21,8 +21,12 @@ Tommy Wong 71659011
 #include <map>
 #include <exception>
 #include <algorithm>
+#include <queue>
+#include <chrono>
+#include <mutex>
 #include "Snake.hpp"
 #include "Board.hpp"
+#include "Message.hpp"
 
 using namespace std;
 
@@ -38,6 +42,11 @@ std::map<int, std::string> players;
 std::map<std::string, int> highscores;
 int ready;
 int test = 0;
+std::mutex mtx;
+std::priority_queue<Message> in_pq;
+std::priority_queue<Message> out_pq;
+const int DELAY = 25; // in ms, temporary
+bool done = false;
 
 bool colisionCheck();
 int winner();
@@ -45,6 +54,38 @@ void gameLoop();
 void scoring();
 bool wallCheck();
 bool inputsReceived();
+
+int getTime() //in ms
+{
+	return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+}
+
+void logToQueue(std::priority_queue<Message> pq, std::string msg, int delay)
+{
+	Message m{msg, getTime() + delay};
+	pq.push(m);
+}
+
+void checkOutQueue()
+{
+	Message m = out_pq.top();
+	if(m.getTimestamp() < getTime())
+	{
+		out_pq.pop();
+		for(int i = 0; i < server.getClientIDs().size(); i++)
+			server.wsSend(i, m.getMessage());
+	}
+}
+
+void checkInQueue()
+{
+	Message m = in_pq.top();
+	if(m.getTimestamp() < getTime())
+	{
+		in_pq.pop();
+		// does something
+	}
+}
 
 void initializeGame(int length, int width, int num_players)
 {
@@ -105,26 +146,21 @@ void gameLoop()
     // send client updated snake coords
     for(int i = 0; i < server.getClientIDs().size(); i++)
     {
-        for(int j = 0; j < server.getClientIDs().size(); j++)
-        {
-            Snake* s = snakeList[j];
-            std::ostringstream os;
-            Coord head = s->getHead();
-            Coord oldTail = s->getOldTail();
-            os << "/snake-" << j << "-" << head.str() << "-" << oldTail.str() << "-" << s->getLength();
-            server.wsSend(i, os.str());
-        }
+        Snake* s = snakeList[i];
+        std::ostringstream os;
+        Coord head = s->getHead();
+        Coord oldTail = s->getOldTail();
+        os << "/snake-" << j << "-" << head.str() << "-" << oldTail.str() << "-" << s->getLength();
+        //server.wsSend(i, os.str());
+        logToQueue(out_pq, os.str(), DELAY);
     }
 
     if(colisionCheck() || wallCheck())
     {
         int w = winner();
-        for(int i = 0; i < server.getClientIDs().size(); i++)
-        {
-            std::ostringstream os;
-            os << "/winner-" << w;
-            server.wsSend(i, os.str());
-        }
+        std::ostringstream os;
+        os << "/winner-" << w;
+        logToQueue(out_pq, os.str(), DELAY)
         gameOver = true;
         scoring();
         ready = 0;
@@ -141,8 +177,7 @@ void gameLoop()
             {
                 std::ostringstream os;
                 os << "/food-" << i << ", " << j;
-                for(int k = 0; k < server.getClientIDs().size(); k++)
-                    server.wsSend(k, os.str());
+                logToQueue(out_pq, os.str(), DELAY);
                 foodFound = true;
                 break;
             }
@@ -153,10 +188,11 @@ void gameLoop()
 
     // check if game is over
 
-    for(int i = 0; i < server.getClientIDs().size(); i++)
-    {
-        server.wsSend(i, "/input_demand-");// + str(frame));
-    }
+    // for(int i = 0; i < server.getClientIDs().size(); i++)
+    // {
+    //     server.wsSend(i, "/input_demand-");// + str(frame));
+    // }
+    logToQueue(out_pq, "/input_demand-", DELAY);
     //frame++;
     //}
 }
@@ -254,8 +290,6 @@ void gameMessageHandler(int clientID, std::string message)
         else
             newDirection = NONE;
         directions[clientID] = newDirection;
-        chrono::nanoseconds delay{100000000};
-        this_thread::sleep_for(delay);
         gameLoop();
     }
     else if(type == "/ready")
@@ -310,10 +344,21 @@ void serverThread(int port)
 	server.startServer(port);
 }
 
+void queueThread()
+{
+	while(!done)
+	{
+		mtx.lock();
+		checkOutQueue();
+		checkInQueue();
+		mtx.unlock();
+		this_thread::sleep_for(chrono::milliseconds{DELAY});
+	}
+}
+
 void serverConsoleThread()
 {
-	chrono::nanoseconds delay{1000000000};
-	this_thread::sleep_for(delay);
+	this_thread::sleep_for(chrono::milliseconds{1000000});
     cout << "Type quit to end server." << endl;;
 	while(true)
 	{
@@ -324,6 +369,7 @@ void serverConsoleThread()
 			if(input == "quit")
 			{
 				server.stopServer();
+				done = true;
 				break;
 			}
 			else if(input == "help")
@@ -357,9 +403,11 @@ int main(int argc, char *argv[]){
     initializeGame(50, 50, 2);
     thread t1{serverThread, port};
     thread t2{serverConsoleThread};
+    thread t3{queueThread};
 
     t1.join();
     t2.join();
+    t3.join();
 
     cout << "Server closed!" << endl;
 
