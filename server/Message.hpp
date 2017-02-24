@@ -20,6 +20,6 @@ public:
 private:
 	std::string msg;
 	int timestamp;
-}
+};
 
 #endif //MESSAGE_HPP

@@ -29,9 +29,11 @@ Tommy Wong 71659011
 #include "Message.hpp"
 
 using namespace std;
+using namespace chrono;
 
 webSocket server;
-map<string, int> userservercores;
+map<string, int> userserverscores;
+int players_num = 0;
 
 Board board{0, 0};
 Board* b = nullptr;
@@ -60,18 +62,27 @@ int getTime() //in ms
 	return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
 }
 
-void logToQueue(std::priority_queue<Message> pq, std::string msg, int delay)
+void logToQueue(std::priority_queue<Message>& pq, std::string msg, int delay)
 {
 	Message m{msg, getTime() + delay};
+	mtx.lock();
 	pq.push(m);
+	mtx.unlock();
 }
 
 void checkOutQueue()
 {
+	mtx.lock();
+	if(out_pq.empty())
+	{
+		mtx.unlock();
+		return;
+	}
 	Message m = out_pq.top();
 	if(m.getTimestamp() < getTime())
 	{
 		out_pq.pop();
+		mtx.unlock();
 		for(int i = 0; i < server.getClientIDs().size(); i++)
 			server.wsSend(i, m.getMessage());
 	}
@@ -79,11 +90,54 @@ void checkOutQueue()
 
 void checkInQueue()
 {
+	mtx.lock();
+	if(in_pq.empty())
+	{
+		mtx.unlock();
+		return;
+	}
 	Message m = in_pq.top();
 	if(m.getTimestamp() < getTime())
 	{
 		in_pq.pop();
-		// does something
+		mtx.unlock();
+		std::string message = m.getMessage();
+		int clientID = std::stoi(message.substr(0, 1));
+		message = message.substr(1);
+	    int pos = message.find("-");
+	    string type = message.substr(0, pos);
+	    message = message.substr(pos+1);
+
+	    if(type == "/direction")
+	    {
+	        std::cout << message << std::endl;
+	        Coord newDirection{};
+	        if(message == "left")
+	            newDirection = LEFT;
+	        else if(message == "right")
+	            newDirection = RIGHT;
+	        else if(message == "down")
+	            newDirection = DOWN;
+	        else if(message == "up")
+	            newDirection = UP;
+	        else
+	            newDirection = NONE;
+	        directions[clientID] = newDirection;
+	        gameLoop();
+	    }
+	    else if(type == "/ready")
+	    {
+	        ready++;
+	        if(ready >= 2)
+	        {
+	            logToQueue(out_pq, "/input_delay-", DELAY);
+	            gameLoop();
+	        }
+	    }
+	    else if(type == "/username")
+	    {
+	        players[clientID] = message;
+	    }
 	}
 }
 
@@ -150,7 +204,7 @@ void gameLoop()
         std::ostringstream os;
         Coord head = s->getHead();
         Coord oldTail = s->getOldTail();
-        os << "/snake-" << j << "-" << head.str() << "-" << oldTail.str() << "-" << s->getLength();
+        os << "/snake-" << i << "-" << head.str() << "-" << oldTail.str() << "-" << s->getLength();
         //server.wsSend(i, os.str());
         logToQueue(out_pq, os.str(), DELAY);
     }
@@ -160,7 +214,7 @@ void gameLoop()
         int w = winner();
         std::ostringstream os;
         os << "/winner-" << w;
-        logToQueue(out_pq, os.str(), DELAY)
+        logToQueue(out_pq, os.str(), DELAY);
         gameOver = true;
         scoring();
         ready = 0;
@@ -270,6 +324,8 @@ std::map<std::string, int> getHighscores()
 
 void gameMessageHandler(int clientID, std::string message)
 {
+	logToQueue(in_pq, std::to_string(clientID) + message, DELAY);
+	/*
     std::cout << message << std::endl;
     int pos = message.find("-");
     string type = message.substr(0, pos);
@@ -308,6 +364,7 @@ void gameMessageHandler(int clientID, std::string message)
     {
         players[clientID] = message;
     }
+    */
 }
 
 void gameOpenHandler(int clientID){
@@ -317,6 +374,7 @@ void gameOpenHandler(int clientID){
         server.wsSend(clientID, "The server is full!");
         server.wsClose(clientID);
     }
+    players_num++;
     os << "Welcome! You are Player " << clientID;
     server.wsSend(clientID, os.str());
     for(int i = 0; i < clientID; i++)
@@ -324,6 +382,7 @@ void gameOpenHandler(int clientID){
 }
 
 void gameCloseHandler(int clientID){
+	players_num--;
     if(clientID < 2)
     {
         for(int i = 0; i < server.getClientIDs().size(); i++)
@@ -348,17 +407,17 @@ void queueThread()
 {
 	while(!done)
 	{
-		mtx.lock();
+		//mtx.lock();
 		checkOutQueue();
 		checkInQueue();
-		mtx.unlock();
+		//mtx.unlock();
 		this_thread::sleep_for(chrono::milliseconds{DELAY});
 	}
 }
 
 void serverConsoleThread()
 {
-	this_thread::sleep_for(chrono::milliseconds{1000000});
+	this_thread::sleep_for(chrono::milliseconds{1000});
     cout << "Type quit to end server." << endl;;
 	while(true)
 	{
@@ -419,24 +478,24 @@ int main(int argc, char *argv[]){
         int index = line.find_last_of("-");
         string user = line.substr(0, index);
         int score = stoi(line.substr(index+1, 1));
-        if(userservercores.count(user)>0)
+        if(userserverscores.count(user)>0)
         {
-            if (score > userservercores[user])
-                userservercores[user] = score;
+            if (score > userserverscores[user])
+                userserverscores[user] = score;
         }
         else
-            userservercores[user] = score;
+            userserverscores[user] = score;
     }
 
     file.close();
 
     std::map<std::string, int> highscores = getHighscores();
     for(auto it = highscores.begin(); it != highscores.end(); it++)
-        userservercores[it->first] = it->second;
+        userserverscores[it->first] = it->second;
 
     std::ofstream outFile;
     outFile.open("highscores.txt", ios::trunc);
-    for(auto it = userservercores.begin(); it != userservercores.end(); it++)
+    for(auto it = userserverscores.begin(); it != userserverscores.end(); it++)
         outFile << it->first << "-" << it->second << "\n";
     outFile.close();
 
