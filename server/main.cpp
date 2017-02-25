@@ -43,12 +43,13 @@ bool gameOver;
 std::map<int, std::string> players;
 std::map<std::string, int> highscores;
 int ready;
-int test = 0;
+int frame = 0;
 std::mutex mtx;
 std::priority_queue<Message> in_pq;
 std::priority_queue<Message> out_pq;
-const int DELAY = 25; // in ms, temporary
+const int DELAY = 50; // in ms, temporary
 bool done = false;
+
 
 bool colisionCheck();
 int winner();
@@ -56,6 +57,11 @@ void gameLoop();
 void scoring();
 bool wallCheck();
 bool inputsReceived();
+
+int randomDelay()
+{
+	return random() % 500; // in ms
+}
 
 int getTime() //in ms
 {
@@ -65,24 +71,19 @@ int getTime() //in ms
 void logToQueue(std::priority_queue<Message>& pq, std::string msg, int delay)
 {
 	Message m{msg, getTime() + delay};
-	mtx.lock();
 	pq.push(m);
-	mtx.unlock();
 }
 
 void checkOutQueue()
 {
-	mtx.lock();
 	if(out_pq.empty())
 	{
-		mtx.unlock();
 		return;
 	}
 	Message m = out_pq.top();
 	if(m.getTimestamp() < getTime())
 	{
 		out_pq.pop();
-		mtx.unlock();
 		for(int i = 0; i < server.getClientIDs().size(); i++)
 			server.wsSend(i, m.getMessage());
 	}
@@ -90,17 +91,14 @@ void checkOutQueue()
 
 void checkInQueue()
 {
-	mtx.lock();
 	if(in_pq.empty())
 	{
-		mtx.unlock();
 		return;
 	}
 	Message m = in_pq.top();
 	if(m.getTimestamp() < getTime())
 	{
 		in_pq.pop();
-		mtx.unlock();
 		std::string message = m.getMessage();
 		int clientID = std::stoi(message.substr(0, 1));
 		message = message.substr(1);
@@ -123,6 +121,8 @@ void checkInQueue()
 	        else
 	            newDirection = NONE;
 	        directions[clientID] = newDirection;
+	        int delay = randomDelay();
+	        logToQueue(out_pq, "/ntp-" + , randomDelay());
 	        gameLoop();
 	    }
 	    else if(type == "/ready")
@@ -130,7 +130,7 @@ void checkInQueue()
 	        ready++;
 	        if(ready >= 2)
 	        {
-	            logToQueue(out_pq, "/input_delay-", DELAY);
+	            logToQueue(out_pq, "/input_demand-", randomDelay());
 	            gameLoop();
 	        }
 	    }
@@ -168,8 +168,8 @@ void gameLoop()
     if(gameOver)
         return;
 
-    std::cout << test << std::endl;
-    test++;
+    std::cout << frame << std::endl;
+    frame++;
 
     // request all client send input before moving on
 
@@ -206,7 +206,7 @@ void gameLoop()
         Coord oldTail = s->getOldTail();
         os << "/snake-" << i << "-" << head.str() << "-" << oldTail.str() << "-" << s->getLength();
         //server.wsSend(i, os.str());
-        logToQueue(out_pq, os.str(), DELAY);
+        logToQueue(out_pq, os.str(), randomDelay());
     }
 
     if(colisionCheck() || wallCheck())
@@ -214,7 +214,7 @@ void gameLoop()
         int w = winner();
         std::ostringstream os;
         os << "/winner-" << w;
-        logToQueue(out_pq, os.str(), DELAY);
+        logToQueue(out_pq, os.str(), randomDelay());
         gameOver = true;
         scoring();
         ready = 0;
@@ -231,7 +231,7 @@ void gameLoop()
             {
                 std::ostringstream os;
                 os << "/food-" << i << ", " << j;
-                logToQueue(out_pq, os.str(), DELAY);
+                logToQueue(out_pq, os.str(), randomDelay());
                 foodFound = true;
                 break;
             }
@@ -246,7 +246,7 @@ void gameLoop()
     // {
     //     server.wsSend(i, "/input_demand-");// + str(frame));
     // }
-    logToQueue(out_pq, "/input_demand-", DELAY);
+    logToQueue(out_pq, "/input_demand-", randomDelay());
     //frame++;
     //}
 }
@@ -324,47 +324,7 @@ std::map<std::string, int> getHighscores()
 
 void gameMessageHandler(int clientID, std::string message)
 {
-	logToQueue(in_pq, std::to_string(clientID) + message, DELAY);
-	/*
-    std::cout << message << std::endl;
-    int pos = message.find("-");
-    string type = message.substr(0, pos);
-    message = message.substr(pos+1);
-
-    if(type == "/direction")
-    {
-        std::cout << message << std::endl;
-        Coord newDirection{};
-        if(message == "left")
-            newDirection = LEFT;
-        else if(message == "right")
-            newDirection = RIGHT;
-        else if(message == "down")
-            newDirection = DOWN;
-        else if(message == "up")
-            newDirection = UP;
-        else
-            newDirection = NONE;
-        directions[clientID] = newDirection;
-        gameLoop();
-    }
-    else if(type == "/ready")
-    {
-        ready++;
-        if(ready >= 2)
-        {
-            for(int i = 0; i < server.getClientIDs().size(); i++)
-            {
-                server.wsSend(i, "/input_demand-");// + str(frame));
-            }
-            gameLoop();
-        }
-    }
-    else if(type == "/username")
-    {
-        players[clientID] = message;
-    }
-    */
+	logToQueue(in_pq, std::to_string(clientID) + message, randomDelay());
 }
 
 void gameOpenHandler(int clientID){
@@ -396,6 +356,12 @@ void gameCloseHandler(int clientID){
     }
 }
 
+void gamePeriodicHandler()
+{
+	checkOutQueue();
+	checkInQueue();
+}
+
 // Server
 
 void serverThread(int port)
@@ -411,7 +377,7 @@ void queueThread()
 		checkOutQueue();
 		checkInQueue();
 		//mtx.unlock();
-		this_thread::sleep_for(chrono::milliseconds{DELAY});
+		this_thread::sleep_for(chrono::milliseconds{randomDelay()});
 	}
 }
 
@@ -457,16 +423,16 @@ int main(int argc, char *argv[]){
     server.setOpenHandler(gameOpenHandler);
     server.setCloseHandler(gameCloseHandler);
     server.setMessageHandler(gameMessageHandler);
-    //server.setPeriodicHandler(periodicHandler);
+    server.setPeriodicHandler(gamePeriodicHandler);
 
     initializeGame(50, 50, 2);
     thread t1{serverThread, port};
     thread t2{serverConsoleThread};
-    thread t3{queueThread};
+    //thread t3{queueThread};
 
     t1.join();
     t2.join();
-    t3.join();
+    //t3.join();
 
     cout << "Server closed!" << endl;
 

@@ -51,7 +51,7 @@ function connect()
 	var message = payload.substring(index+1);
 	if(type == "/input_demand")
 	{
-		Server.send('input_demand', "/direction-" + direction);
+		Server.send('input_demand', "/direction-" + direction + "-" + );
 		direction = "none";
 	}
 	else if(type == "/snake")
@@ -88,6 +88,10 @@ function connect()
 
 	}
 	else if(type == "/winner")
+	{
+
+	}
+	else if(type == "/ntp")
 	{
 
 	}
