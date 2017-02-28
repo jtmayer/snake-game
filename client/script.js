@@ -49,9 +49,10 @@ function connect()
 	var index = payload.indexOf("-");
 	var type = payload.substring(0, index);
 	var message = payload.substring(index+1);
+	var milliseconds = new Date().getTime();
 	if(type == "/input_demand")
 	{
-		Server.send('input_demand', "/direction-" + direction + "-" + );
+		Server.send('input_demand', "/direction-" + direction + "-" + milliseconds);
 		direction = "none";
 	}
 	else if(type == "/snake")
@@ -84,8 +85,6 @@ function connect()
 		var food_y = message.substring(index+2);
 		var coords = makeCords(food_x, food_y);
 		drawPixel(coords, "#FFF000")
-
-
 	}
 	else if(type == "/winner")
 	{
@@ -93,7 +92,13 @@ function connect()
 	}
 	else if(type == "/ntp")
 	{
-
+		index = message.indexOf("-");
+		var serverTime = message.substring(index+1);
+		var previousTime = message.substring(0, index);
+		var currentTime = new Date().getTime();
+		previousTime = parseInt(previousTime);
+		serverTime = parseInt(serverTime);
+		log("Latency Estimation: " + ((currentTime - previousTime - serverTime)/2));
 	}
     });
 

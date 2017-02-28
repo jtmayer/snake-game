@@ -39,3 +39,8 @@ int Message::getTimestamp()
 {
 	return timestamp;
 }
+
+int Message::getClientID()
+{
+	return clientID;
+}

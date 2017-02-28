@@ -47,6 +47,8 @@ int frame = 0;
 std::mutex mtx;
 std::priority_queue<Message> in_pq;
 std::priority_queue<Message> out_pq;
+std::map<int, int> clientTime;
+std::map<int, int sereverTime;
 const int DELAY = 50; // in ms, temporary
 bool done = false;
 
@@ -68,9 +70,9 @@ int getTime() //in ms
 	return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
 }
 
-void logToQueue(std::priority_queue<Message>& pq, std::string msg, int delay)
+void logToQueue(std::priority_queue<Message>& pq, int clientID, std::string msg, int delay)
 {
-	Message m{msg, getTime() + delay};
+	Message m{clientID, msg, getTime() + delay};
 	pq.push(m);
 }
 
@@ -84,8 +86,7 @@ void checkOutQueue()
 	if(m.getTimestamp() < getTime())
 	{
 		out_pq.pop();
-		for(int i = 0; i < server.getClientIDs().size(); i++)
-			server.wsSend(i, m.getMessage());
+		server.wsSend(m.getClientID(), m.getMessage());
 	}
 }
 
@@ -100,29 +101,31 @@ void checkInQueue()
 	{
 		in_pq.pop();
 		std::string message = m.getMessage();
-		int clientID = std::stoi(message.substr(0, 1));
-		message = message.substr(1);
+		int clientID = m.getClientID();
 	    int pos = message.find("-");
 	    string type = message.substr(0, pos);
 	    message = message.substr(pos+1);
 
 	    if(type == "/direction")
 	    {
-	        std::cout << message << std::endl;
+            pos = message.find("-");
+            direction = message.substr(0, pos);
+            int time = message.substr(pos+1);
 	        Coord newDirection{};
-	        if(message == "left")
+	        if(direction == "left")
 	            newDirection = LEFT;
-	        else if(message == "right")
+	        else if(direction == "right")
 	            newDirection = RIGHT;
-	        else if(message == "down")
+	        else if(direction == "down")
 	            newDirection = DOWN;
-	        else if(message == "up")
+	        else if(direction == "up")
 	            newDirection = UP;
 	        else
 	            newDirection = NONE;
 	        directions[clientID] = newDirection;
+            clientTime[clientID] = time;
+            serverTime[clientID] = getTime();
 	        int delay = randomDelay();
-	        logToQueue(out_pq, "/ntp-" + , randomDelay());
 	        gameLoop();
 	    }
 	    else if(type == "/ready")
@@ -130,7 +133,8 @@ void checkInQueue()
 	        ready++;
 	        if(ready >= 2)
 	        {
-	            logToQueue(out_pq, "/input_demand-", randomDelay());
+                for(int i = 0; i < server.getClientIDs(); i++)
+	               logToQueue(out_pq, i, "/input_demand-", randomDelay());
 	            gameLoop();
 	        }
 	    }
@@ -205,8 +209,11 @@ void gameLoop()
         Coord head = s->getHead();
         Coord oldTail = s->getOldTail();
         os << "/snake-" << i << "-" << head.str() << "-" << oldTail.str() << "-" << s->getLength();
-        //server.wsSend(i, os.str());
-        logToQueue(out_pq, os.str(), randomDelay());
+        for(int j = j < server.getClientIDs().size(); j++)
+        {
+            //server.wsSend(i, os.str());
+            logToQueue(out_pq, j, os.str(), randomDelay());
+        }
     }
 
     if(colisionCheck() || wallCheck())
@@ -214,7 +221,8 @@ void gameLoop()
         int w = winner();
         std::ostringstream os;
         os << "/winner-" << w;
-        logToQueue(out_pq, os.str(), randomDelay());
+        for(int i = 0; i < server.getClientIDs().size(); i++)
+            logToQueue(out_pq, os.str(), randomDelay());
         gameOver = true;
         scoring();
         ready = 0;
@@ -231,7 +239,8 @@ void gameLoop()
             {
                 std::ostringstream os;
                 os << "/food-" << i << ", " << j;
-                logToQueue(out_pq, os.str(), randomDelay());
+                for(int k = 0; k < server.getClientIDs().size(); k++)
+                    logToQueue(out_pq, k, os.str(), randomDelay());
                 foodFound = true;
                 break;
             }
@@ -246,7 +255,11 @@ void gameLoop()
     // {
     //     server.wsSend(i, "/input_demand-");// + str(frame));
     // }
-    logToQueue(out_pq, "/input_demand-", randomDelay());
+    for(int i = 0; i < server.getClientIDs().size(); i++)
+        logToQueue(out_pq, i,"/ntp-" + to_string(clientTime[i]) + "-" + to_string(getTime() - to_string(serverTime[i])), randomDelay());
+    
+    for(int i = 0; i < server.getClientIDs().size(); i++)
+        logToQueue(out_pq, i,"/input_demand-", randomDelay());
     //frame++;
     //}
 }
