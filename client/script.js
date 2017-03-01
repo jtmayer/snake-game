@@ -5,7 +5,7 @@
 
   Jonathan Mayer 66268081
   Brian Lam 62101239
-  Yu Koizumi 
+  Yu Koizumi 000975171
   Tommy Wong 71659011
 */
 
@@ -192,9 +192,7 @@ function drawSnakes(headList, oldTailList)
 {
     for (var i in oldTailList)
     {
-	if (oldTailList[i] != null) {
-	    drawPixel(oldTailList[i], "#FFFFFF");
-	}
+		   drawPixel(oldTailList[i], "#FFFFFF");
     }
 
     for (var i in headList)

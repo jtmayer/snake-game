@@ -2,7 +2,7 @@ Group 12
 
 Jonathan Mayer 66268081
 Brian Lam 62101239
-Yu Koizumi 
+Yu Koizumi 000975171
 Tommy Wong 71659011
 
 Works on Linux:
@@ -17,3 +17,12 @@ Currently cannot run on Mac:
 
 The server should generate a highscores.txt file with all the highscores
 of the users.
+Should be able to perform the goals of Milestone 3.
+There are several bugs.
+BUGS:
+The game in its current state cannot be played repeatedly within the same session.
+The server must be restarted for each game.
+The server may have issues with starting the game if a client gets ready and leaves
+and another client joins and gets ready.
+The client needs to refresh to clear the drawings on the canvas.
+Client: Sometimes improperly draws snakes, does not affect gameplay though.

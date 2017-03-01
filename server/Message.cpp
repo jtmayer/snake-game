@@ -1,6 +1,18 @@
+/*
+Created for Milestone 3
+
+Group 12
+
+Jonathan Mayer 66268081
+Brian Lam 62101239
+Yu Koizumi 000975171
+Tommy Wong 71659011
+*/
+
 #include "Message.hpp"
 
-Message::Message(std::string msg, int timestamp) : msg{msg}, timestamp{timestamp}
+Message::Message(int clientID, std::string msg, long timestamp) 
+: clientID{clientID}, msg{msg}, timestamp{timestamp}
 {
 
 }
@@ -35,7 +47,7 @@ std::string Message::getMessage()
 	return msg;
 }
 
-int Message::getTimestamp()
+long Message::getTimestamp()
 {
 	return timestamp;
 }

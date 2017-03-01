@@ -1,3 +1,14 @@
+/*
+Created for Milestone 2
+
+Group 12
+
+Jonathan Mayer 66268081
+Brian Lam 62101239
+Yu Koizumi 000975171
+Tommy Wong 71659011
+*/
+
 #ifndef SNAKEGAME_HPP
 #define SNAKEGAME_HPP
 

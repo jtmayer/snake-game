@@ -5,7 +5,7 @@ Group 12
 
 Jonathan Mayer 66268081
 Brian Lam 62101239
-Yu Koizumi 
+Yu Koizumi 000975171
 Tommy Wong 71659011
 */
 
@@ -47,8 +47,8 @@ int frame = 0;
 std::mutex mtx;
 std::priority_queue<Message> in_pq;
 std::priority_queue<Message> out_pq;
-std::map<int, int> clientTime;
-std::map<int, int sereverTime;
+std::map<int, long> clientTime;
+std::map<int, long> serverTime;
 const int DELAY = 50; // in ms, temporary
 bool done = false;
 
@@ -65,7 +65,7 @@ int randomDelay()
 	return random() % 500; // in ms
 }
 
-int getTime() //in ms
+long getTime() //in ms
 {
 	return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
 }
@@ -109,8 +109,10 @@ void checkInQueue()
 	    if(type == "/direction")
 	    {
             pos = message.find("-");
-            direction = message.substr(0, pos);
-            int time = message.substr(pos+1);
+            std::string direction = message.substr(0, pos);
+            std::string s_time = message.substr(pos+1);
+            cout << s_time << endl;
+            long time = std::stol(s_time);
 	        Coord newDirection{};
 	        if(direction == "left")
 	            newDirection = LEFT;
@@ -133,7 +135,7 @@ void checkInQueue()
 	        ready++;
 	        if(ready >= 2)
 	        {
-                for(int i = 0; i < server.getClientIDs(); i++)
+                for(int i = 0; i < server.getClientIDs().size(); i++)
 	               logToQueue(out_pq, i, "/input_demand-", randomDelay());
 	            gameLoop();
 	        }
@@ -209,7 +211,7 @@ void gameLoop()
         Coord head = s->getHead();
         Coord oldTail = s->getOldTail();
         os << "/snake-" << i << "-" << head.str() << "-" << oldTail.str() << "-" << s->getLength();
-        for(int j = j < server.getClientIDs().size(); j++)
+        for(int j = 0; j < server.getClientIDs().size(); j++)
         {
             //server.wsSend(i, os.str());
             logToQueue(out_pq, j, os.str(), randomDelay());
@@ -222,7 +224,7 @@ void gameLoop()
         std::ostringstream os;
         os << "/winner-" << w;
         for(int i = 0; i < server.getClientIDs().size(); i++)
-            logToQueue(out_pq, os.str(), randomDelay());
+            logToQueue(out_pq,i , os.str(), randomDelay());
         gameOver = true;
         scoring();
         ready = 0;
@@ -256,7 +258,7 @@ void gameLoop()
     //     server.wsSend(i, "/input_demand-");// + str(frame));
     // }
     for(int i = 0; i < server.getClientIDs().size(); i++)
-        logToQueue(out_pq, i,"/ntp-" + to_string(clientTime[i]) + "-" + to_string(getTime() - to_string(serverTime[i])), randomDelay());
+        logToQueue(out_pq, i, "/ntp-" + to_string(clientTime[i]) + "-" + to_string(getTime() - serverTime[i]), randomDelay());
     
     for(int i = 0; i < server.getClientIDs().size(); i++)
         logToQueue(out_pq, i,"/input_demand-", randomDelay());
@@ -337,7 +339,7 @@ std::map<std::string, int> getHighscores()
 
 void gameMessageHandler(int clientID, std::string message)
 {
-	logToQueue(in_pq, std::to_string(clientID) + message, randomDelay());
+	logToQueue(in_pq, clientID, message, randomDelay());
 }
 
 void gameOpenHandler(int clientID){
