@@ -124,7 +124,7 @@ function ready()
 // Client functions for Canvas
 
 // Creates a cords object.
-var makeCords = makePairType("x", "y");
+var makeCords = makeTupleType("x", "y");
 
 headList = new Array(2)
 tailList = new Array(2)
@@ -165,26 +165,25 @@ function eventHandler(event)
 	}
 }
 
-// Todo: Togglable lazy evaluation functionality.
-function makePairType(firstElementName, secondElementName)
+function makeTupleType()
 {
-    return function (a, b) {
-	var pair = {};
+    var fieldName = Array.prototype.slice.call(arguments, 0);
+    
+    return function () {
+	var args = Array.prototype.slice.call(arguments, 0);
+	var tuple = {};
+
+	for (var i in args)
+	{
+	    Object.defineProperty(tuple, fieldName[i], {
+		value: args[i],
+		writable: true,
+		configurable: true,
+		enumerable: true
+	    });
+	}
 	
-	Object.defineProperty(pair, firstElementName, {
-	    value: a,
-	    writable: true,
-	    configurable: true,
-	    enumerable: true
-	});
-	
-	Object.defineProperty(pair, secondElementName, {
-	    value: b,
-	    writable: true,
-	    configurable: true,
-	    enumerable: true
-	});
-	return pair;
+	return tuple;
     };
 }
 
@@ -513,7 +512,7 @@ var left = makeCords(-1, 0);
 var right = makeCords(1, 0);
 
 // Creates a node object.
-var makeNode = makePairType("val", "next");
+var makeNode = makeTupleType("val", "next");
 
 // Todo: Replace next of tail with a delayed expression.
 function makeSnake(cords)
