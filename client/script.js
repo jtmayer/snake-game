@@ -46,22 +46,22 @@ function connect()
     //Log any messages sent from server
     Server.bind('message', function( payload ) {
 	//log(payload);
-	var index = payload.indexOf("-");
+	var index = payload.indexOf("/");
 	var type = payload.substring(0, index);
 	var message = payload.substring(index+1);
 	var milliseconds = new Date().getTime();
 	if(type == "/input_demand")
 	{
-		Server.send('input_demand', "/direction-" + direction + "-" + milliseconds);
+		Server.send('input_demand', "/direction/" + direction + "/" + milliseconds);
 		direction = "none";
 	}
 	else if(type == "/snake")
 	{
-		index = message.indexOf("-");
+		index = message.indexOf("/");
 		var player = message.substring(0, index);
 		player = parseInt(player);
 		message = message.substring(index+1);
-		index = message.indexOf("-");
+		index = message.indexOf("/");
 		var head = message.substring(0, index)
 		message = message.substring(index+1);
 		index = message.indexOf("-");
@@ -71,6 +71,7 @@ function connect()
 		var head_x = head.substring(0, index);
 		var head_y = head.substring(index+2);
 		snakes.headList[player] = makeCords(head_x, head_y);
+		index = oldTail.indexOf(",");
 		var oldTail_x = oldTail.substring(0, index);
 		var oldTail_y = oldTail.substring(index+2);
 		snakes.tailList[player] = makeCords(oldTail_x, oldTail_y);
@@ -88,17 +89,24 @@ function connect()
 	}
 	else if(type == "/winner")
 	{
+		log("The winner is Player " + message)
+
 
 	}
 	else if(type == "/ntp")
 	{
-		index = message.indexOf("-");
+		index = message.indexOf("/");
 		var serverTime = message.substring(index+1);
 		var previousTime = message.substring(0, index);
 		var currentTime = new Date().getTime();
 		previousTime = parseInt(previousTime);
 		serverTime = parseInt(serverTime);
 		log("Latency Estimation: " + ((currentTime - previousTime - serverTime)/2));
+	}
+	else if(type == "/disconnect")
+	{
+		document.getElementById("setUsernameButton").disabled = false;
+		document.getElementById("readyButton").disabled = true;
 	}
     });
 
@@ -116,7 +124,7 @@ function ready()
 {
     document.getElementById("readyButton").disabled = true;
     // clearCanvas();
-    Server.send('ready', "/ready-");
+    Server.send('ready', "/ready/");
     // mainLoop([makeSnake(makeCords(9, 10)), makeSnake(makeCords(7, 10))], null);
     //reset();
 }

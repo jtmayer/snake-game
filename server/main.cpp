@@ -32,7 +32,6 @@ using namespace std;
 using namespace chrono;
 
 webSocket server;
-map<string, int> userserverscores;
 int players_num = 0;
 
 Board board{0, 0};
@@ -44,7 +43,6 @@ std::map<int, std::string> players;
 std::map<std::string, int> highscores;
 int ready;
 int frame = 0;
-std::mutex mtx;
 std::priority_queue<Message> in_pq;
 std::priority_queue<Message> out_pq;
 std::map<int, long> clientTime;
@@ -52,7 +50,7 @@ std::map<int, long> serverTime;
 const int DELAY = 50; // in ms, temporary
 bool done = false;
 
-
+void initializeGame(int length, int width, int num_players);
 bool colisionCheck();
 int winner();
 void gameLoop();
@@ -62,7 +60,7 @@ bool inputsReceived();
 
 int randomDelay()
 {
-	return random() % 500; // in ms
+	return random() % 250; // in ms
 }
 
 long getTime() //in ms
@@ -102,13 +100,13 @@ void checkInQueue()
 		in_pq.pop();
 		std::string message = m.getMessage();
 		int clientID = m.getClientID();
-	    int pos = message.find("-");
+	    int pos = message.find("/");
 	    string type = message.substr(0, pos);
 	    message = message.substr(pos+1);
 
 	    if(type == "/direction")
 	    {
-            pos = message.find("-");
+            pos = message.find("/");
             std::string direction = message.substr(0, pos);
             std::string s_time = message.substr(pos+1);
             cout << s_time << endl;
@@ -135,8 +133,9 @@ void checkInQueue()
 	        ready++;
 	        if(ready >= 2)
 	        {
+    			initializeGame(50, 50, 2);
                 for(int i = 0; i < server.getClientIDs().size(); i++)
-	               logToQueue(out_pq, i, "/input_demand-", randomDelay());
+	               logToQueue(out_pq, i, "/input_demand/", randomDelay());
 	            gameLoop();
 	        }
 	    }
@@ -210,7 +209,7 @@ void gameLoop()
         std::ostringstream os;
         Coord head = s->getHead();
         Coord oldTail = s->getOldTail();
-        os << "/snake-" << i << "-" << head.str() << "-" << oldTail.str() << "-" << s->getLength();
+        os << "/snake/" << i << "/" << head.str() << "/" << oldTail.str() << "/" << s->getLength();
         for(int j = 0; j < server.getClientIDs().size(); j++)
         {
             //server.wsSend(i, os.str());
@@ -222,7 +221,7 @@ void gameLoop()
     {
         int w = winner();
         std::ostringstream os;
-        os << "/winner-" << w;
+        os << "/winner/" << w;
         for(int i = 0; i < server.getClientIDs().size(); i++)
             logToQueue(out_pq,i , os.str(), randomDelay());
         gameOver = true;
@@ -240,7 +239,7 @@ void gameLoop()
             if(board.getItem(i, j) == food)
             {
                 std::ostringstream os;
-                os << "/food-" << i << ", " << j;
+                os << "/food/" << i << ", " << j;
                 for(int k = 0; k < server.getClientIDs().size(); k++)
                     logToQueue(out_pq, k, os.str(), randomDelay());
                 foodFound = true;
@@ -258,10 +257,10 @@ void gameLoop()
     //     server.wsSend(i, "/input_demand-");// + str(frame));
     // }
     for(int i = 0; i < server.getClientIDs().size(); i++)
-        logToQueue(out_pq, i, "/ntp-" + to_string(clientTime[i]) + "-" + to_string(getTime() - serverTime[i]), randomDelay());
+        logToQueue(out_pq, i, "/ntp/" + to_string(clientTime[i]) + "/" + to_string(getTime() - serverTime[i]), randomDelay());
     
     for(int i = 0; i < server.getClientIDs().size(); i++)
-        logToQueue(out_pq, i,"/input_demand-", randomDelay());
+        logToQueue(out_pq, i,"/input_demand/", randomDelay());
     //frame++;
     //}
 }
@@ -353,7 +352,7 @@ void gameOpenHandler(int clientID){
     os << "Welcome! You are Player " << clientID;
     server.wsSend(clientID, os.str());
     for(int i = 0; i < clientID; i++)
-        server.wsSend(i, "/welcome-");
+        server.wsSend(i, "/welcome/");
 }
 
 void gameCloseHandler(int clientID){
@@ -363,12 +362,13 @@ void gameCloseHandler(int clientID){
         for(int i = 0; i < server.getClientIDs().size(); i++)
         {
             std::ostringstream os;
-            os << "Oh no! Player " << clientID << " disconnected! Game over!";
+            os << "/disconnect/" << "Oh no! Player " << clientID << " disconnected! Game over!";
             if(i != clientID)
                 server.wsSend(i, os.str());
         }
         gameOver = true;
     }
+    ready = 0;
 }
 
 void gamePeriodicHandler()
@@ -440,7 +440,6 @@ int main(int argc, char *argv[]){
     server.setMessageHandler(gameMessageHandler);
     server.setPeriodicHandler(gamePeriodicHandler);
 
-    initializeGame(50, 50, 2);
     thread t1{serverThread, port};
     thread t2{serverConsoleThread};
     //thread t3{queueThread};
@@ -459,24 +458,29 @@ int main(int argc, char *argv[]){
         int index = line.find_last_of("-");
         string user = line.substr(0, index);
         int score = stoi(line.substr(index+1, 1));
-        if(userserverscores.count(user)>0)
+        if(highscores.count(user)>0)
         {
-            if (score > userserverscores[user])
-                userserverscores[user] = score;
+            if (score > highscores[user])
+                highscores[user] = score;
         }
         else
-            userserverscores[user] = score;
+            highscores[user] = score;
     }
 
     file.close();
 
-    std::map<std::string, int> highscores = getHighscores();
-    for(auto it = highscores.begin(); it != highscores.end(); it++)
-        userserverscores[it->first] = it->second;
+    // std::map<std::string, int> highscores = getHighscores();
+    // for(auto it = highscores.begin(); it != highscores.end(); it++)
+    // {
+    // 	if(highscores.count(it->first) > 0 && highscores[it->first] < it->second)
+    //     	highscores[it->first] = it->second;
+    //     else
+    //     	highscores[it->first] = it->second;
+    // }
 
     std::ofstream outFile;
     outFile.open("highscores.txt", ios::trunc);
-    for(auto it = userserverscores.begin(); it != userserverscores.end(); it++)
+    for(auto it = highscores.begin(); it != highscores.end(); it++)
         outFile << it->first << "-" << it->second << "\n";
     outFile.close();
 
