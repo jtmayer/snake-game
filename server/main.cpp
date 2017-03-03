@@ -100,7 +100,7 @@ void checkInQueue()
 		in_pq.pop();
 		std::string message = m.getMessage();
 		int clientID = m.getClientID();
-	    int pos = message.find("/");
+	    int pos = message.find("/", 1);
 	    string type = message.substr(0, pos);
 	    message = message.substr(pos+1);
 
@@ -439,6 +439,11 @@ int main(int argc, char *argv[]){
     server.setCloseHandler(gameCloseHandler);
     server.setMessageHandler(gameMessageHandler);
     server.setPeriodicHandler(gamePeriodicHandler);
+    //initializeGame(50, 50, 2);
+    //initializeGame(50, 50, 2);
+    //initializeGame(50, 50, 2);
+    //initializeGame(50, 50, 2);
+    //initializeGame(50, 50, 2);
 
     thread t1{serverThread, port};
     thread t2{serverConsoleThread};

@@ -9,9 +9,20 @@
   Tommy Wong 71659011
 */
 
+/*
+Testing
+function timed()
+{
+	console.log(frame++);
+	setTimeout(timed, 1000);
+}
+*/
+
 // Client-Server Functions
 var Server;
 var direction = "none";
+var official_direction = "";
+var made_snake = 0;
 document.addEventListener("keydown", eventHandler);
 
 function log( text )
@@ -46,13 +57,14 @@ function connect()
     //Log any messages sent from server
     Server.bind('message', function( payload ) {
 	//log(payload);
-	var index = payload.indexOf("/");
+	var index = payload.indexOf("/", 1);
 	var type = payload.substring(0, index);
 	var message = payload.substring(index+1);
 	var milliseconds = new Date().getTime();
 	if(type == "/input_demand")
 	{
-		Server.send('input_demand', "/direction/" + direction + "/" + milliseconds);
+		official_direction = direction;
+		Server.send('input_demand', "/direction/" + official_direction + "/" + milliseconds);
 		direction = "none";
 	}
 	else if(type == "/snake")
@@ -64,7 +76,7 @@ function connect()
 		index = message.indexOf("/");
 		var head = message.substring(0, index)
 		message = message.substring(index+1);
-		index = message.indexOf("-");
+		index = message.indexOf("/");
 		var oldTail = message.substring(0, index);
 		var length = message.substring(index+1);
 		index = head.indexOf(",");
@@ -75,6 +87,8 @@ function connect()
 		var oldTail_x = oldTail.substring(0, index);
 		var oldTail_y = oldTail.substring(index+2);
 		snakes.tailList[player] = makeCords(oldTail_x, oldTail_y);
+
+		//if(made_snake )
 
 		drawSnakes(snakes.headList, snakes.tailList);
 		log("Player " + player + " - Score: " + length);
@@ -116,7 +130,7 @@ function connect()
 function setUsername()
 {
     document.getElementById("setUsernameButton").disabled = true;
-    Server.send('username', "/username-" + document.getElementById("username").value);
+    Server.send('username', "/username/" + document.getElementById("username").value);
     document.getElementById("readyButton").disabled = false;
 }
 
@@ -268,6 +282,27 @@ function generateCanvasDependencies(canvas, scaling)
 
 var canvasDependencies = generateCanvasDependencies(document.getElementById("a"), 10);
 var drawPixel = canvasDependencies[0];
+
+var up = makeCords(0, -1);
+var down = makeCords(0, 1);
+var left = makeCords(-1, 0);
+var right = makeCords(1, 0);
+
+// Creates a node object.
+var makeNode = makeTupleType("val", "next");
+
+// Todo: Replace next of tail with a delayed expression.
+function makeSnake(cords)
+{
+    var node = makeNode(cords, null);
+    var snake = {"oldTail" : null,
+		 "tail" : node,
+		 "head" : node,
+		 "direction" : makeCords(1,0),
+		 "length" : 1}
+    
+    return snake;
+}
 
 /*
 function isPair(x)
@@ -514,26 +549,9 @@ var generateCordsOnBoard = canvasDependencies[3];
 var clearCanvas = canvasDependencies[4];
 
 
-var up = makeCords(0, -1);
-var down = makeCords(0, 1);
-var left = makeCords(-1, 0);
-var right = makeCords(1, 0);
 
-// Creates a node object.
-var makeNode = makeTupleType("val", "next");
 
-// Todo: Replace next of tail with a delayed expression.
-function makeSnake(cords)
-{
-    var node = makeNode(cords, null);
-    var snake = {"oldTail" : null,
-		 "tail" : node,
-		 "head" : node,
-		 "direction" : makeCords(1,0),
-		 "length" : 1}
-    
-    return snake;
-}
+
 
 function updateState(state)
 {
