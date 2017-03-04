@@ -18,13 +18,79 @@ function timed()
 }
 */
 
+function generateCanvasDependencies(canvas, scaling)
+{
+    var context =canvas.getContext("2d");
+    var boardWidth = canvas.width / scaling;
+    var boardHeight = canvas.height / scaling;
+    
+    return [
+	// drawPixel
+	function(cords, color)
+	{
+	    context.fillStyle = color;
+	    context.fillRect(cords.x * scaling,
+			     cords.y * scaling,
+			     scaling,
+			     scaling);
+	},
+
+	// makeEmptyBoard
+	function()
+	{
+	    var board = new Array(boardWidth);
+	    for (var i = 0; i < boardWidth; ++i) {
+		board[i] = new Array(boardHeight);
+		
+		for (var j = 0; j < boardHeight; ++j)
+		{
+		    board[i][j] = null;
+		}
+	    }
+	    
+	    return board;
+	},
+
+	    // isCordsOnBoard
+	    function(cords)
+	    {
+		// return cords.x >= 0 && cords.y >= 0 && cords.x < boardWidth && cords.y < boardHeight;
+		return every(isInBounds,
+			     pairToArray(cords),
+			     [0, 0],
+			     map(dec, [boardWidth, boardHeight]));
+	    },
+
+	    // generateCordsOnBoard
+	    function()
+	    {
+		return makeCords(Math.floor(Math.random() * boardWidth),
+				 Math.floor(Math.random() * boardHeight));
+	    },
+
+	    // clearCanvas
+	    function()
+	    {
+		context.fillStyle = "#FFFFFF";
+		context.fillRect(0, 0, canvas.width, canvas.height);
+	    }];
+}
+
+var canvasDependencies = generateCanvasDependencies(document.getElementById("a"), 10);
+var drawPixel = canvasDependencies[0];
+var clearCanvas = canvasDependencies[4];
+
 // Client-Server Functions
+
+
 var Server;
 var direction = "none";
 var official_direction = "";
 var made_snake = false;
-var snakeList = [];
+var snakeList = [makeSnake(), makeSnake()];
 var official_clientID;
+
+
 
 //var snakeList = [makeSnake(makeCords(9,10)), makeSnake(makeCords(7,10))];
 document.addEventListener("keydown", eventHandler);
@@ -97,14 +163,16 @@ function connect()
 
 		if(official_clientID != player)
 		{
-			snakeList[player] = makeSnake(head_coords);
+			snakeList[player] = makeSnake();//head_coords);
+			snakeList[player].head.val = head_coords;
 			snakeList[player].oldTail = oldTail_coords;
 		}
 		else
 		{		
 			if(!made_snake)
 			{
-				snakeList[player] = makeSnake(head_coords);
+				snakeList[player] = makeSnake();//head_coords);
+				snakeList[player].head.val = head_coords;
 				made_snake = true;
 			}
 			var no_expand = true;
@@ -270,68 +338,6 @@ function drawSnakes(snakeList)
 
 }
 
-function generateCanvasDependencies(canvas, scaling)
-{
-    var context =canvas.getContext("2d");
-    var boardWidth = canvas.width / scaling;
-    var boardHeight = canvas.height / scaling;
-    
-    return [
-	// drawPixel
-	function(cords, color)
-	{
-	    context.fillStyle = color;
-	    context.fillRect(cords.x * scaling,
-			     cords.y * scaling,
-			     scaling,
-			     scaling);
-	},
-
-	// makeEmptyBoard
-	function()
-	{
-	    var board = new Array(boardWidth);
-	    for (var i = 0; i < boardWidth; ++i) {
-		board[i] = new Array(boardHeight);
-		
-		for (var j = 0; j < boardHeight; ++j)
-		{
-		    board[i][j] = null;
-		}
-	    }
-	    
-	    return board;
-	},
-
-	    // isCordsOnBoard
-	    function(cords)
-	    {
-		// return cords.x >= 0 && cords.y >= 0 && cords.x < boardWidth && cords.y < boardHeight;
-		return every(isInBounds,
-			     pairToArray(cords),
-			     [0, 0],
-			     map(dec, [boardWidth, boardHeight]));
-	    },
-
-	    // generateCordsOnBoard
-	    function()
-	    {
-		return makeCords(Math.floor(Math.random() * boardWidth),
-				 Math.floor(Math.random() * boardHeight));
-	    },
-
-	    // clearCanvas
-	    function()
-	    {
-		context.fillStyle = "#FFFFFF";
-		context.fillRect(0, 0, canvas.width, canvas.height);
-	    }];
-}
-
-var canvasDependencies = generateCanvasDependencies(document.getElementById("a"), 10);
-var drawPixel = canvasDependencies[0];
-var clearCanvas = canvasDependencies[4];
-
 var up = makeCords(0, -1);
 var down = makeCords(0, 1);
 var left = makeCords(-1, 0);
@@ -341,9 +347,9 @@ var right = makeCords(1, 0);
 var makeNode = makeTupleType("val", "next");
 
 // Todo: Replace next of tail with a delayed expression.
-function makeSnake(cords)
+function makeSnake()//ords)
 {
-    var node = makeNode(cords, null);
+    var node = makeNode(null, null);//cords, null);
     var snake = {"oldTail" : null,
 		 "tail" : node,
 		 "head" : node,
