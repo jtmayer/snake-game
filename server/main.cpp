@@ -349,7 +349,7 @@ void gameOpenHandler(int clientID){
         server.wsClose(clientID);
     }
     players_num++;
-    os << "Welcome! You are Player " << clientID;
+    os << "/welcome/" << clientID << "/Welcome! You are Player " << clientID;
     server.wsSend(clientID, os.str());
     for(int i = 0; i < clientID; i++)
         server.wsSend(i, "/welcome/");
