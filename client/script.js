@@ -279,6 +279,29 @@ function connect()
 	    message = message.substring(index+1);
 	    log(message);
 	}
+  else if(type == "/initialize_local")
+  {
+    index = message.indexOf("/");
+    var head = message.substring(0, index)
+    var oldTail = message.substring(index+1);
+    index = head.indexOf(",");
+    var head_x = head.substring(0, index);
+    var head_y = head.substring(index+2);
+    var head_coords = makeCords(head_x, head_y);
+    index = oldTail.indexOf(",");
+    var oldTail_x = oldTail.substring(0, index);
+    var oldTail_y = oldTail.substring(index+2);
+    var oldTail_coords = makeCords(oldTail_x, oldTail_y);
+
+    if(!made_snake)
+    {
+        snakeList[official_clientID] = makeSnake();//head_coords);
+        snakeList[official_clientID].head.val = head_coords;
+        snakeList[official_clientID].oldTail = oldTail_coords;
+        made_snake = true;
+    }
+    Server.send("done", "/done");
+  }
     });
 
     Server.connect();

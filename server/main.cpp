@@ -134,14 +134,25 @@ void checkInQueue()
 	        if(ready >= 2)
 	        {
     			initializeGame(50, 50, 2);
-                for(int i = 0; i < server.getClientIDs().size(); i++)
-	               logToQueue(out_pq, i, "/input_demand/", randomDelay());
-	            gameLoop();
+    			for(int i = 0; i < snakeList.size(); i++)
+    			{        
+    				Snake* s = snakeList[i];
+			        std::ostringstream os;
+			        Coord head = s->getHead();
+    				os << "/initialize_local/" << head.str() << "/" << "0, 0";
+    				logToQueue(out_pq, i, os.str(), randomDelay());
+    			}
 	        }
 	    }
 	    else if(type == "/username")
 	    {
 	        players[clientID] = message;
+	    }
+	    else if(type == "/done")
+	    {
+            for(int i = 0; i < server.getClientIDs().size(); i++)
+               logToQueue(out_pq, i, "/input_demand/", randomDelay());
+            gameLoop();
 	    }
 	}
 }
@@ -352,7 +363,9 @@ void gameOpenHandler(int clientID){
     os << "/welcome/" << clientID << "/Welcome! You are Player " << clientID;
     server.wsSend(clientID, os.str());
     for(int i = 0; i < clientID; i++)
-        server.wsSend(i, "/welcome/");
+    {
+        //server.wsSend(i, "/welcome/");
+    }
 }
 
 void gameCloseHandler(int clientID){
