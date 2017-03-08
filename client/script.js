@@ -136,7 +136,7 @@ function directionToCord(direction)
 
 var Server;
 var direction = "none";
-var official_direction = "";
+var official_direction = "none";
 var made_snake = false;
 var snakeList = [makeSnake(), makeSnake()];
 var official_clientID;
@@ -186,7 +186,7 @@ function connect()
 	{
 	    official_direction = direction;
 
-	    if (official_direction != "none")
+	    if (official_direction != "none" && !made_snake)
 	    {
 		snakeList[official_clientID].direction = directionToCord(official_direction);
 	    }
@@ -275,7 +275,7 @@ function connect()
 	else if(type == "/welcome")
 	{
 	    index = message.indexOf("/");
-	    official_clientID = message.substring(0, index);
+	    official_clientID = parseInt(message.substring(0, index));
 	    message = message.substring(index+1);
 	    log(message);
 	}
@@ -312,6 +312,7 @@ function update(no_expand)
 	snake.oldTail = snake.tail.val;
 	snake.tail = snake.tail.next;
     }
+    snakeList[official_clientID] = snake;
 }
 
 // Client functions for Canvas
@@ -369,10 +370,10 @@ function drawSnakes(snakeList)
 
 }
 
-// var up = makeCords(0, -1);
-// var down = makeCords(0, 1);
-// var left = makeCords(-1, 0);
-// var right = makeCords(1, 0);
+var up = makeCords(0, -1);
+var down = makeCords(0, 1);
+var left = makeCords(-1, 0);
+var right = makeCords(1, 0);
 
 // Todo: Replace next of tail with a delayed expression.
 function makeSnake()//ords)
@@ -381,7 +382,7 @@ function makeSnake()//ords)
     var snake = {"oldTail" : null,
 		 "tail" : node,
 		 "head" : node,
-		 "direction" : null}
+		 "direction" : right}
     
     return snake;
 }
