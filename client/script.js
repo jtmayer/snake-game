@@ -186,9 +186,9 @@ function connect()
 	{
 	    official_direction = direction;
 
-	    if (official_direction != "none" && !made_snake)
+	    if (official_direction != "none" && made_snake)
 	    {
-		snakeList[official_clientID].direction = directionToCord(official_direction);
+		    snakeList[official_clientID].direction = directionToCord(official_direction);
 	    }
 	    
 	    //update();
@@ -297,7 +297,9 @@ function connect()
     {
         snakeList[official_clientID] = makeSnake();//head_coords);
         snakeList[official_clientID].head.val = head_coords;
+        snakeList[official_clientID].tail.val = head_coords;
         snakeList[official_clientID].oldTail = oldTail_coords;
+        snakeList[official_clientID].direction = directionToCord("right");
         made_snake = true;
     }
     Server.send("done", "/done");
@@ -327,13 +329,13 @@ function ready()
 function update(no_expand)
 {
     var snake = snakeList[official_clientID];
-    snake.head.next = makeNode(makeCords(snake.head.val.x + snake.direction.x,
-					 snake.head.val.y + snake.direction.y), null);
+    snake.head.next = makeNode(makeCords(parseInt(snake.head.val.x) + parseInt(snake.direction.x),
+					 parseInt(snake.head.val.y) + parseInt(snake.direction.y), null));
     snake.head = snake.head.next;
     if(no_expand)
     {
-	snake.oldTail = snake.tail.val;
-	snake.tail = snake.tail.next;
+    	snake.oldTail = snake.tail.val;
+    	snake.tail = snake.tail.next;
     }
     snakeList[official_clientID] = snake;
 }
