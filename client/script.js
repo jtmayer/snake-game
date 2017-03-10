@@ -285,12 +285,12 @@ function connect()
     var head = message.substring(0, index)
     var oldTail = message.substring(index+1);
     index = head.indexOf(",");
-    var head_x = head.substring(0, index);
-    var head_y = head.substring(index+2);
+    var head_x = parseInt(head.substring(0, index));
+    var head_y = parseInt(head.substring(index+2));
     var head_coords = makeCords(head_x, head_y);
     index = oldTail.indexOf(",");
-    var oldTail_x = oldTail.substring(0, index);
-    var oldTail_y = oldTail.substring(index+2);
+    var oldTail_x = parseInt(oldTail.substring(0, index));
+    var oldTail_y = parseInt(oldTail.substring(index+2));
     var oldTail_coords = makeCords(oldTail_x, oldTail_y);
 
     if(!made_snake)
