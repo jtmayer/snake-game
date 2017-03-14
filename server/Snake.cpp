@@ -39,12 +39,15 @@ void Snake::update()
 	head = head->next;
 	int x = head->value.x;
 	int y = head->value.y;
-	if(board->getItem(x, y) == food) // Check for food
-  	{
-		length++;
-		board->setItem(x, y, empty);
-		board->addItem(food);
-		return;
+	if(x >= 0 &&y >= 0 && x < board->getLength() && y < board->getWidth())
+	{
+		if(board->getItem(x, y) == food) // Check for food
+	  	{
+			length++;
+			board->setItem(x, y, empty);
+			board->addItem(food);
+			return;
+		}
 	}
 	Node* temp = tail;
 	tail = tail->next;

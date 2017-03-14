@@ -24,5 +24,5 @@ The game in its current state cannot be played repeatedly within the same sessio
 The server must be restarted for each game.
 The server may have issues with starting the game if a client gets ready and leaves
 and another client joins and gets ready.
-The client needs to refresh to clear the drawings on the canvas.
+Highscores are not properly being saved in the .txt
 Client: Sometimes improperly draws snakes, does not affect gameplay though.

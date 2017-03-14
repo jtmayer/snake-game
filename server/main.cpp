@@ -134,25 +134,14 @@ void checkInQueue()
 	        if(ready >= 2)
 	        {
     			initializeGame(50, 50, 2);
-    			for(int i = 0; i < snakeList.size(); i++)
-    			{        
-    				Snake* s = snakeList[i];
-			        std::ostringstream os;
-			        Coord head = s->getHead();
-    				os << "/initialize_local/" << head.str() << "/" << "0, 0";
-    				logToQueue(out_pq, i, os.str(), randomDelay());
-    			}
+                for(int i = 0; i < server.getClientIDs().size(); i++)
+                   logToQueue(out_pq, i, "/input_demand/", randomDelay());
+                gameLoop();
 	        }
 	    }
 	    else if(type == "/username")
 	    {
 	        players[clientID] = message;
-	    }
-	    else if(type == "/done")
-	    {
-            for(int i = 0; i < server.getClientIDs().size(); i++)
-               logToQueue(out_pq, i, "/input_demand/", randomDelay());
-            gameLoop();
 	    }
 	}
 }
@@ -207,11 +196,27 @@ void gameLoop()
         directions[i] = INVALID;
     }
 
+    
+    if(colisionCheck() || wallCheck())
+    {
+        int w = winner();
+        std::ostringstream os;
+        os << "/winner/" << w;
+        for(int i = 0; i < server.getClientIDs().size(); i++)
+            logToQueue(out_pq,i , os.str(), randomDelay());
+        gameOver = true;
+        scoring();
+        ready = 0;
+        return;
+    }
+
     // update snakes
     for(int i = 0; i < snakeList.size(); i++)
     {
         snakeList[i]->update();
     }
+
+
 
     // send client updated snake coords
     for(int i = 0; i < server.getClientIDs().size(); i++)
@@ -228,18 +233,6 @@ void gameLoop()
         }
     }
 
-    if(colisionCheck() || wallCheck())
-    {
-        int w = winner();
-        std::ostringstream os;
-        os << "/winner/" << w;
-        for(int i = 0; i < server.getClientIDs().size(); i++)
-            logToQueue(out_pq,i , os.str(), randomDelay());
-        gameOver = true;
-        scoring();
-        ready = 0;
-        return;
-    }
 
     // send clients item positions
     bool foodFound = false;
